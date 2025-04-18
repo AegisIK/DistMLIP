@@ -18,7 +18,7 @@ void fractional_to_cartesian(
         double u = frac_coords[3 * i];
         double v = frac_coords[3 * i + 1];
         double w = frac_coords[3 * i + 2];
-        
+
         // Compute Cartesian coordinates
         cart_coords[3 * i]     = u * lattice[0] + v * lattice[1] + w * lattice[2]; // x
         cart_coords[3 * i + 1] = u * lattice[3] + v * lattice[4] + w * lattice[5]; // y
@@ -27,7 +27,7 @@ void fractional_to_cartesian(
 }
 
 Results* create_subgraphs(
-    double* all_coords, 
+    double* all_coords,
     int num_all_coords,
     double r,
     long* pbc,
@@ -72,7 +72,7 @@ PyObject* buf_to_np_array(void* buffer, npy_intp* dims, int num_dims, int typenu
     PyObject* capsule = PyCapsule_New(buffer, NULL, buffer_deallocator);
     if (!capsule) {
         Py_DECREF(array);
-        free(buffer); 
+        free(buffer);
         PyErr_SetString(PyExc_RuntimeError, "Failed to create capsule for memory management.");
         return NULL;
     }
@@ -97,9 +97,9 @@ static PyObject* get_subgraphs(PyObject *self, PyObject *args) {
     npy_bool use_bond_graph_npy;
     bool use_bond_graph;
     int num_nodes;
-    
+
     // Parse the input arguments
-    if (!PyArg_ParseTuple(args, "O!dO!O!IddibO!", 
+    if (!PyArg_ParseTuple(args, "O!dO!O!IddibO!",
                           &PyArray_Type, &all_coords_double_npy,
                           &r,
                           &PyArray_Type, &pbc_long_npy,
@@ -163,9 +163,9 @@ static PyObject* get_subgraphs(PyObject *self, PyObject *args) {
         struct timespec t0, t1, t2;
         t0 = get_time();
     #endif
-    intra_parallel_find_points_in_spheres_c(all_coords, num_nodes, 
-                                        all_coords, num_nodes, 
-                                        r, pbc, lattice, &src_nodes, 
+    intra_parallel_find_points_in_spheres_c(all_coords, num_nodes,
+                                        all_coords, num_nodes,
+                                        r, pbc, lattice, &src_nodes,
                                         &dst_nodes, &offsets, &distances,
                                         &within_bond_r_indices, &num_within_bond_r_indices,
                                         &fpis_num_edges, bond_r, tol, num_threads);
@@ -188,11 +188,11 @@ static PyObject* get_subgraphs(PyObject *self, PyObject *args) {
         fflush(stdout);
     #endif
 
-    Results* results = get_features(fpis_num_edges, src_nodes, dst_nodes, 
-                                    wrapped_cart_coords, num_nodes, 
+    Results* results = get_features(fpis_num_edges, src_nodes, dst_nodes,
+                                    wrapped_cart_coords, num_nodes,
                                     num_partitions, r, distances,
-                                    bond_r, num_within_bond_r_indices, 
-                                    within_bond_r_indices, offsets, num_threads, 
+                                    bond_r, num_within_bond_r_indices,
+                                    within_bond_r_indices, offsets, num_threads,
                                     use_bond_graph, frac_coords, lattice);
     free(wrapped_cart_coords);
     // --------------------------------------------------------------------
@@ -224,7 +224,7 @@ static PyObject* get_subgraphs(PyObject *self, PyObject *args) {
 
         PyObject* curr_local_edges_src_nodes = buf_to_np_array(results->local_edge_src_nodes[partition_i], edges_dims, 1, NPY_LONG);
         PyObject* curr_local_edges_dst_nodes = buf_to_np_array(results->local_edge_dst_nodes[partition_i], edges_dims, 1, NPY_LONG);
-        
+
         PyList_SetItem(local_edges_src_nodes_pylist, partition_i, curr_local_edges_src_nodes);
         PyList_SetItem(local_edges_dst_nodes_pylist, partition_i, curr_local_edges_dst_nodes);
 
@@ -267,10 +267,10 @@ static PyObject* get_subgraphs(PyObject *self, PyObject *args) {
             PyList_SetItem(local_lines_src_nodes_pylist, partition_i, curr_local_lines_src_nodes);
             PyList_SetItem(local_lines_dst_nodes_pylist, partition_i, curr_local_lines_dst_nodes);
 
-        }        
-        
+        }
+
     }
-    
+
 
     npy_intp fpis_edges_dims[1] = {fpis_num_edges};
     npy_intp fpis_offsets_dims[2] = {fpis_num_edges, 3};
@@ -288,9 +288,9 @@ static PyObject* get_subgraphs(PyObject *self, PyObject *args) {
         // free(results->global_id_markers[partition_i]);
 
         // free(results->partitions[partition_i]->edges_ids);
-        
+
         free(results->partitions[partition_i]->pure_dst_nodes);
-        
+
         if (use_bond_graph) {
             free(results->partitions[partition_i]->pure_UDEs);
         }
@@ -313,7 +313,7 @@ static PyObject* get_subgraphs(PyObject *self, PyObject *args) {
         }
 
         // Free transfer info from each partition struct
-        for (unsigned int partition_j = 0; partition_j < num_partitions; partition_j++) { 
+        for (unsigned int partition_j = 0; partition_j < num_partitions; partition_j++) {
             if (partition_i == partition_j) {
                 continue;
             } else {
@@ -336,7 +336,7 @@ static PyObject* get_subgraphs(PyObject *self, PyObject *args) {
             // TODO: transfer this to subgraph_creation_utils when done testing
             // free(results->G2L_DE_mappings[partition_i]);
         }
-            
+
     }
     free(results->global_id_arrays);
     free(results->global_id_markers);
@@ -365,13 +365,13 @@ static PyObject* get_subgraphs(PyObject *self, PyObject *args) {
 
         free(results->num_bond_mapping);
     }
-        
+
 
     if (use_bond_graph) {
         // TODO: transfer this to subgraph_creation_utils when done testing
         free(results->G2L_DE_mappings);
     }
-        
+
 
     free(results);
 
@@ -407,23 +407,23 @@ static PyObject* get_subgraphs(PyObject *self, PyObject *args) {
 
 
     return PyTuple_Pack(19, local_edges_src_nodes_pylist,
-                            local_edges_dst_nodes_pylist, 
-                            markers_pylist, 
-                            local_coords_pylist, 
-                            global_ids_pylist, 
-                            fpis_src_nodes, 
-                            fpis_dst_nodes, 
-                            fpis_offsets, 
-                            fpis_dists, 
-                            local_lines_src_nodes_pylist, 
-                            local_lines_dst_nodes_pylist, 
-                            fpis_within_bond_r_indices, 
-                            line_markers_pylist, 
-                            num_UDEs_per_partition_pylist, 
-                            local_bond_mapping_DE_pylist, 
-                            local_bond_mapping_UDE_pylist, 
-                            L2G_mapping_pylist, 
-                            G2L_mapping_pylist, 
+                            local_edges_dst_nodes_pylist,
+                            markers_pylist,
+                            local_coords_pylist,
+                            global_ids_pylist,
+                            fpis_src_nodes,
+                            fpis_dst_nodes,
+                            fpis_offsets,
+                            fpis_dists,
+                            local_lines_src_nodes_pylist,
+                            local_lines_dst_nodes_pylist,
+                            fpis_within_bond_r_indices,
+                            line_markers_pylist,
+                            num_UDEs_per_partition_pylist,
+                            local_bond_mapping_DE_pylist,
+                            local_bond_mapping_UDE_pylist,
+                            L2G_mapping_pylist,
+                            G2L_mapping_pylist,
                             local_center_atom_indices_pylist);
 }
 
@@ -447,4 +447,3 @@ PyMODINIT_FUNC PyInit_subgraph_creation_fast(void) {
     import_array(); // Initialize NumPy API
     return PyModule_Create(&SubgraphCreationModule);
 }
-

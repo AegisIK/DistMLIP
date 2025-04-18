@@ -1,33 +1,96 @@
+from __future__ import annotations
+
 import numpy as np
 from matgl.distributed.subgraph_creation_fast import get_subgraphs_fast
 import torch
+from typing import List, Tuple, Optional, Union
 
 
 class Distributed:
+    "Distributed Graph for parallelized MLIP inference"
+
     def __init__(
         self,
-        src_nodes,
-        dst_nodes,
-        markers,
-        local_coords,
-        global_ids,
-        py_index_1,
-        py_index_2,
-        py_offsets,
-        py_distances,
-        line_src_nodes,
-        line_dst_nodes,
-        within_r_indices,
-        line_markers,
-        num_UDEs_per_partition,
-        bond_mapping_DE_list,
-        bond_mapping_UDE_list,
-        L2G_DE_mapping_list,
-        G2L_DE_mapping_list,
-        local_center_atom_indices_list,
-        use_bond_graph,
-        total_num_nodes,
+        src_nodes: List[np.ndarray],
+        dst_nodes: List[np.ndarray],
+        markers: List[np.ndarray],
+        local_coords: List[np.ndarray],
+        global_ids: List[np.ndarray],
+        py_index_1: np.ndarray,
+        py_index_2: np.ndarray,
+        py_offsets: np.ndarray,
+        py_distances: np.ndarray,
+        line_src_nodes: List[np.ndarray],
+        line_dst_nodes: List[np.ndarray],
+        within_r_indices: List[np.ndarray],
+        line_markers: List[np.ndarray] | None,
+        num_UDEs_per_partition: List[int],
+        bond_mapping_DE_list: List[np.ndarray],
+        bond_mapping_UDE_list: List[np.ndarray],
+        L2G_DE_mapping_list: List[np.ndarray],
+        G2L_DE_mapping_list: List[np.ndarray],
+        local_center_atom_indices_list: List[np.ndarray],
+        use_bond_graph: bool,
+        total_num_nodes: int,
     ) -> None:
+        """
+        Initializes the Distributed Graph.
+
+        Args:
+            src_nodes (list): List of numpy arrays, where each array contains the
+               source node indices (local) for edges in that partition's atom graph.
+            dst_nodes (list): List of numpy arrays, where each array contains the
+               destination node indices (local) for edges in that partition's atom
+               graph.
+            markers (list): List of numpy arrays. Each array marks boundaries for
+               different types of nodes within a partition (e.g., core nodes, border
+               nodes shared with specific other partitions).
+               The structure is typically:
+               [0, num_core, num_core + num_border_p1, ..., num_core + ... + num_border_pn, total_local_nodes].
+            local_coords (list): List of numpy arrays, each holding the Cartesian
+               coordinates of nodes (atoms) within that partition.
+            global_ids (list): List of numpy arrays. Each array maps local node indices
+               in a partition to their original global node IDs.
+            py_index_1 (np.ndarray): Global source node indices for all edges across
+               all partitions (concatenated). Often corresponds to the full,
+               non-distributed graph's edge index.
+            py_index_2 (np.ndarray): Global destination node indices for all edges
+               across all partitions (concatenated). Often corresponds to the full,
+               non-distributed graph's edge index.
+            py_offsets (np.ndarray): Global offset vectors for periodic boundary
+               conditions for all edges.
+            py_distances (np.ndarray): Global distances for all edges.
+            line_src_nodes (list): List of numpy arrays, source nodes for the bond
+               graph (if use_bond_graph is True).
+            line_dst_nodes (list): List of numpy arrays, destination nodes for the bond
+               graph (if use_bond_graph is True).
+            within_r_indices (list): Indices relevant for three-body interactions
+               (if applicable).
+            line_markers (list): List of numpy arrays, similar to `markers` but for the
+               bond graph nodes.
+            num_UDEs_per_partition (list): Number of unique directed edges (nodes in
+               the bond graph) per partition.
+            bond_mapping_DE_list (list): List of numpy arrays. Maps directed edge
+               indices (in atom graph) to their corresponding indices within the local
+               partition's unique directed edges (bond graph nodes).
+            bond_mapping_UDE_list (list): List of numpy arrays. Maps unique directed
+               edge indices (bond graph nodes) back to their corresponding indices
+               within the local partition's unique directed edges (seems redundant,
+               possibly for reverse mapping).
+            L2G_DE_mapping_list (list): List of numpy arrays. Maps local directed edge
+               indices (atom graph edges) in a partition to their global edge indices.
+               `L2G_DE_mapping_list[partition_idx][local_edge_idx] = global_edge_idx`.
+            G2L_DE_mapping_list (list): List of numpy arrays. Maps global directed edge
+               indices to local directed edge indices. Note: Marked as potentially
+               unreliable in the original source code.
+            local_center_atom_indices_list (list): List of lists, containing indices of
+               the 'center' atoms for each partition (often those originally assigned
+               to the partition before adding border atoms).
+            use_bond_graph (bool): Flag indicating if bond graph information is
+               included and should be used.
+            total_num_nodes (int): The total number of nodes (atoms) in the original,
+               non-distributed graph.
+        """
         self.src_nodes = src_nodes
         self.dst_nodes = dst_nodes
         self.markers = markers
@@ -58,17 +121,40 @@ class Distributed:
     @classmethod
     def create_distributed(
         cls,
-        cart_coords,
-        frac_coords,
-        lattice_matrix,
-        num_partitions,
-        pbc,
-        cutoff,
-        three_body_cutoff,
-        tol,
-        use_bond_graph=False,
-        num_threads=1,
-    ):
+        cart_coords: np.ndarray,
+        frac_coords: np.ndarray,
+        lattice_matrix: np.ndarray,
+        num_partitions: int,
+        pbc: Tuple[bool, bool, bool],
+        cutoff: float,
+        three_body_cutoff: float,
+        tol: float,
+        use_bond_graph: bool = False,
+        num_threads: int = 1,
+    ) -> "Distributed":
+        """
+        Class method to create a Distributed instance by partitioning a graph.
+
+        This method takes the fundamental description of a periodic structure
+        (coordinates, lattice, PBC flags) and partitioning parameters, then calls
+        the `get_subgraphs_fast` function to perform the actual partitioning
+        and generate the necessary data structures for distributed computation.
+
+        Args:
+            cart_coords (np.ndarray): Cartesian coordinates of all atoms (N x 3).
+            frac_coords (np.ndarray): Fractional coordinates of all atoms (N x 3).
+            lattice_matrix (np.ndarray): Lattice vectors (3 x 3).
+            num_partitions (int): The desired number of partitions (e.g., number of GPUs).
+            pbc (Tuple[bool, bool, bool]): Periodic boundary conditions along each lattice vector direction.
+            cutoff (float): The cutoff radius for finding neighbors (atom graph edges).
+            three_body_cutoff (float): The cutoff radius for three-body interactions (if applicable).
+            tol (float): Tolerance for distance calculations.
+            use_bond_graph (bool, optional): Whether to generate data structures for the bond graph (line graph). Defaults to False.
+            num_threads (int, optional): Number of threads to use for parallelization within `get_subgraphs_fast`. Defaults to 1.
+
+        Returns:
+            Distributed: A new instance of the Distributed class containing the partitioned graph data.
+        """
         cart_coords = np.ascontiguousarray(cart_coords, dtype=float)
         frac_coords = np.ascontiguousarray(frac_coords, dtype=float)
         lattice_matrix = np.ascontiguousarray(lattice_matrix, dtype=float)
@@ -78,7 +164,8 @@ class Distributed:
             dst_nodes,
             markers,
             local_coords,
-            global_ids,  # list of lists: (# GPUs, n), consists of the global atom graph node IDs
+            global_ids,
+            # list of lists: (# GPUs, n), consists of the global atom graph node IDs
             py_index_1,
             py_index_2,
             py_offsets,
@@ -91,7 +178,8 @@ class Distributed:
             bond_mapping_DE_list,
             bond_mapping_UDE_list,
             L2G_DE_mapping_list,  # index i is the global id associated with local id i
-            G2L_DE_mapping_list,  # index j is the local id associated with global id j. <--- THIS IS NOT RELIABLE.
+            G2L_DE_mapping_list,
+            # index j is the local id associated with global id j. <--- THIS IS NOT RELIABLE.
             local_center_atom_indices_list,
         ) = get_subgraphs_fast(
             cart_coords,
@@ -149,9 +237,27 @@ class Distributed:
             len(cart_coords),
         )
 
-    def aggregate(self, features_to_aggregate, device="cpu", aggregate_dim=None):
+    def aggregate(
+        self,
+        features_to_aggregate: List[torch.Tensor],
+        device: Union[str, torch.device] = "cpu",
+        aggregate_dim: Optional[int] = None,
+    ) -> torch.Tensor:
         """
-        Aggregates the features of features_to_aggregate into a single tensor on gpu_to_aggregate_to
+        Aggregates 'core' node features from partitions into a global tensor.
+
+        Selects features for non-border nodes from each partition's local
+        feature tensor and places them into a global tensor using global IDs.
+
+        Args:
+            features_to_aggregate: List of local node feature tensors, one
+                per partition.
+            device: Target device for the aggregated tensor. Defaults to "cpu".
+            aggregate_dim: Size of the first dimension of the output tensor.
+                Defaults to `self.total_num_nodes`.
+
+        Returns:
+            A single tensor with aggregated core node features, indexed globally.
         """
 
         if not aggregate_dim:
@@ -177,9 +283,24 @@ class Distributed:
 
         return combined_feats
 
-    def transfer_nodes(self, features, markers):
+    def transfer_nodes(
+        self, features: List[torch.Tensor], markers: List[np.ndarray]
+    ) -> List[torch.Tensor]:
         """
-        Transfers node features between all partitions such that each partition has the most up to date border node features
+        Transfers border node features between partitions (in-place).
+
+        Updates 'ghost' node features in receiving partitions with computed
+        features from the source partition's corresponding border nodes. Uses
+        the `markers` array to identify data slices for transfer.
+
+        Args:
+            features: List of feature tensors (one per partition), modified
+                in-place.
+            markers: Marker arrays (`self.markers` or `self.line_markers`)
+                defining border regions.
+
+        Returns:
+            The updated list of feature tensors (modified in-place).
         """
         assert len(features) == self.num_partitions
 
@@ -200,23 +321,52 @@ class Distributed:
 
         return features
 
-    def atom_transfer(self, features):
+    def atom_transfer(self, features: List[torch.Tensor]) -> List[torch.Tensor]:
         """
-        Updates the atom graph node features such that each gpu has the most up to date features.
+        Convenience method to transfer atom node features using atom markers.
+
+        Args:
+            features: List of atom node feature tensors, modified in-place.
+
+        Returns:
+            The updated list of atom node feature tensors.
         """
 
         return self.transfer_nodes(features, self.markers)
 
-    def bond_transfer(self, features):
+    def bond_transfer(self, features: List[torch.Tensor]) -> List[torch.Tensor]:
         """
-        Updates the bond graph node features such that each gpu has the most up to date features.
+        Convenience method to transfer bond node features using bond markers.
+
+        Requires `use_bond_graph` to be True.
+
+        Args:
+            features: List of bond node feature tensors, modified in-place.
+
+        Returns:
+            The updated list of bond node feature tensors.
         """
 
         return self.transfer_nodes(features, self.line_markers)
 
-    def aggregate_atom_edge(self, atom_edge_features, gpu_to_aggregate_to="cpu"):
+    def aggregate_atom_edge(
+        self,
+        atom_edge_features: List[torch.Tensor],
+        gpu_to_aggregate_to: Union[str, torch.device] = "cpu",
+    ) -> torch.Tensor:
         """
-        Aggregates the edge features within atom graph into a single tensor
+        Aggregates atom graph edge features from all partitions globally.
+
+        Uses `L2G_DE_mapping_list` to map local edge features to their global
+        indices in the output tensor.
+
+        Args:
+            atom_edge_features: List of local atom edge feature tensors.
+            gpu_to_aggregate_to: Target device for the aggregated tensor.
+                Defaults to "cpu".
+
+        Returns:
+            A single tensor with aggregated edge features, indexed globally.
         """
 
         aggregated_feats = torch.empty(
@@ -230,11 +380,24 @@ class Distributed:
 
         return aggregated_feats
 
-    def aggregate_bond_node(self, bond_node_features, gpu_to_aggregate_to):
+    def aggregate_bond_node(
+        self,
+        bond_node_features: List[torch.Tensor],
+        gpu_to_aggregate_to: Union[str, torch.device],
+    ) -> torch.Tensor:
         """
-        Aggregates the node features within bond graph into a single tensor with dimension (number of atom edges, *feature_dim)
+        Aggregates bond graph node features into an atom-edge aligned tensor.
 
-        Edge indices within atom graph that don't correspond to nodes within bond graph will have their features defaulted to 0
+        Maps bond node features to temporary local atom edge tensors using
+        bond-to-edge mappings, then aggregates these temporary tensors globally.
+        Edges not represented in the bond graph get zero features.
+
+        Args:
+            bond_node_features: List of local bond node feature tensors.
+            gpu_to_aggregate_to: Target device for the aggregated tensor.
+
+        Returns:
+            Aggregated features tensor, indexed like global atom edges.
         """
 
         placeholder_dims = [
@@ -258,23 +421,83 @@ class Distributed:
             atom_edge_features_placeholders, gpu_to_aggregate_to=gpu_to_aggregate_to
         )
 
-    def num_atoms(self, partition):
+    def num_atoms(self, partition: int) -> int:
+        """
+        Returns the number of atoms in a partition.
+
+        Args:
+            partition: The partition index.
+
+        Returns:
+            Number of local atoms in the partition.
+        """
         return len(self.local_coords[partition])
 
-    def num_bonds(self, partition):
+    def num_bonds(self, partition: int) -> int:
+        """
+        Returns the number of local bond graph nodes in a partition.
+
+        Requires `use_bond_graph` to be True.
+
+        Args:
+            partition: The partition index.
+
+        Returns:
+            Number of local bond graph nodes in the partition.
+        """
         assert self.use_bond_graph, "num_bonds only works when bond graph is enabled"
         return self.line_markers[partition][-1]
 
     def global_to_local_nodes(
-        self, global_node_features, partition, device="cpu", inplace=False
-    ):
+        self,
+        global_node_features: torch.Tensor,
+        partition: int,
+        device: Union[str, torch.device] = "cpu",
+        inplace: bool = False,
+    ) -> torch.Tensor:
+        """
+        Extracts local node features for a partition from a global tensor.
+
+        Uses the `global_ids` mapping to select features.
+
+        Args:
+            global_node_features: Tensor with features for all nodes, indexed
+                globally.
+            partition: Index of the target partition.
+            device: Target device for the output local tensor. Defaults to "cpu".
+            inplace: If False (default), clones data before indexing. If True,
+                indexes directly (use caution).
+
+        Returns:
+            Tensor with local node features for the specified partition.
+        """
         if inplace:
             return global_node_features[self.global_ids[partition]].to(device)
         return global_node_features.clone()[self.global_ids[partition]].to(device)
 
     def global_to_local_edges(
-        self, global_edge_features, partition, device="cpu", inplace=False
-    ):
+        self,
+        global_edge_features: torch.Tensor,
+        partition: int,
+        device: Union[str, torch.device] = "cpu",
+        inplace: bool = False,
+    ) -> torch.Tensor:
+        """
+        Extracts local edge features for a partition from a global tensor.
+
+        Uses the `L2G_DE_mapping_list` to select features.
+
+        Args:
+            global_edge_features: Tensor with features for all edges, indexed
+                globally.
+            partition: Index of the target partition.
+            device: Target device for the output local tensor. Defaults to "cpu".
+            inplace: If False (default), clones data before indexing. If True,
+                indexes directly.
+
+        Returns:
+            Tensor with local edge features for the specified partition.
+        """
         if inplace:
             return global_edge_features[self.L2G_DE_mapping_list[partition]].to(device)
         return global_edge_features.clone()[self.L2G_DE_mapping_list[partition]].to(
@@ -283,17 +506,29 @@ class Distributed:
 
     def edge_to_bond(
         self,
-        edge_features,
-        partition,
-        device="cpu",
-        inplace=False,
-        bond_node_features=None,
-    ):
+        edge_features: torch.Tensor,
+        partition: int,
+        device: Union[str, torch.device] = "cpu",
+        inplace: bool = False,
+        bond_node_features: Optional[torch.Tensor] = None,
+    ) -> Optional[torch.Tensor]:
         """
-        Transfers edge features in atom graph to node features in bond graph
+        Maps atom edge features to bond node features for a partition.
 
-        edge_features - edge features for the current partition
-        inplace - boolean - determines whether or not we have a bond_node_features tensor to place the edge features into
+        Uses `bond_mapping_DE_list` and `bond_mapping_UDE_list`. Requires
+        `use_bond_graph` to be True.
+
+        Args:
+            edge_features: Local atom edge features for the partition.
+            partition: The partition index.
+            device: Target device for output (if not inplace). Defaults to "cpu".
+            inplace: If True, modifies `bond_node_features` directly and
+                requires it to be provided. Defaults to False.
+            bond_node_features: Pre-allocated tensor for bond node features,
+                required and modified if `inplace` is True. Defaults to None.
+
+        Returns:
+            New tensor with bond node features if `inplace` is False, else None.
         TODO: add some basic checks to make sure that the edge features are for the current partition
         """
         if inplace:
@@ -314,9 +549,25 @@ class Distributed:
 
         return bond_features
 
-    def bond_to_edge(self, bond_node_features, atom_edge_features, partition):
+    def bond_to_edge(
+        self,
+        bond_node_features: torch.Tensor,
+        atom_edge_features: torch.Tensor,
+        partition: int,
+    ) -> None:
         """
-        Transfers node features in bond graph to edge features in atom graph
+        Maps bond node features back to atom edge features (in-place).
+
+        Uses `bond_mapping_DE_list` and `bond_mapping_UDE_list`. Modifies
+        `atom_edge_features` in-place. Requires `use_bond_graph` to be True.
+
+        Args:
+            bond_node_features: Local bond node features for the partition.
+            atom_edge_features: Local atom edge features tensor to be modified.
+            partition: The partition index.
+
+        Returns:
+            None. Modifies `atom_edge_features` in-place.
         """
         atom_edge_features[partition][self.bond_mapping_DE_list[partition]] = (
             bond_node_features[partition][self.bond_mapping_UDE_list[partition]]

@@ -383,7 +383,7 @@ class Distributed:
     def aggregate_bond_node(
         self,
         bond_node_features: List[torch.Tensor],
-        gpu_to_aggregate_to: Union[str, torch.device],
+        gpu_to_aggregate_to: Union[str, torch.device] = "cpu",
     ) -> torch.Tensor:
         """
         Aggregates bond graph node features into an atom-edge aligned tensor.

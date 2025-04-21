@@ -723,7 +723,7 @@ Results* get_features(
                         }
 
                         if (line_num_edges[partition_i] != 0 && line_num_edges[partition_i] % LINE_GRAPH_DEFAULT_ITEMS == 0) {
-                            printf("Reallocing # of line graph items for partition %u\n", partition_i);
+                            PRINTF("Reallocing # of line graph items for partition %u\n", partition_i);
                             line_src_nodes[partition_i] = realloc(line_src_nodes[partition_i], sizeof(long) * (line_num_edges[partition_i] + LINE_GRAPH_DEFAULT_ITEMS));
                             line_dst_nodes[partition_i] = realloc(line_dst_nodes[partition_i], sizeof(long) * (line_num_edges[partition_i] + LINE_GRAPH_DEFAULT_ITEMS));
                             center_atom_indices[partition_i] = realloc(center_atom_indices[partition_i], sizeof(long) * (line_num_edges[partition_i] + LINE_GRAPH_DEFAULT_ITEMS));

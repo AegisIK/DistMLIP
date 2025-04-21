@@ -14,7 +14,7 @@ const long LINE_GRAPH_DEFAULT_ITEMS = 1000000; // TODO: ultimately, we would wan
 const double NUMERICAL_TOL = 1e-8; // numerical tolerance for determining how close two doubles are to each other
 
 
-// array of size num_nodes where the ith index of to_partition is the partition in which 
+// array of size num_nodes where the ith index of to_partition is the partition in which
 // node i is sent to. if node i is not a border node, then to_partition[i] will be -1
 int* nodes_to_partition;
 
@@ -28,7 +28,7 @@ Results* get_features(
     long* src_nodes,
     long* dst_nodes,
     double* center_coords, // cartesian coordinates of each node: (num_nodes, 3)
-    long num_nodes, 
+    long num_nodes,
     unsigned int num_partitions,
     double atom_cutoff,
     double* distances, // shape: (num_edges, )
@@ -53,7 +53,7 @@ Results* get_features(
         printf("Why would you want less than 0 partitions?\n");
         return NULL;
     }
-    
+
     #ifdef TIMING
         struct timespec t1 = get_time();
         struct timespec t2 = get_time();
@@ -86,7 +86,7 @@ Results* get_features(
     PRINTF("Number of bonds within atom radius: %ld\n", num_edges);
     PRINTF("Number of bonds within bond radius: %ld\n", num_within_bond_r_indices);
     PRINTF("USE_BOND_GRAPH IS %d\n", use_bond_graph);
-    
+
     #ifdef TIMING
         t2 = get_time();
         elapsed = time_diff(t1, t2);
@@ -94,7 +94,7 @@ Results* get_features(
 
         t1 = get_time();
     #endif
-    
+
     // Assign nodes to their respective to/from/pure bucket and create to_partition array
     nodes_to_partition = malloc(sizeof(int) * num_nodes); // see comment above global var declaration
 
@@ -105,7 +105,7 @@ Results* get_features(
         t2 = get_time();
         elapsed = time_diff(t1, t2);
         printf("TIMING: Assigned each node to a partition: %f\n", elapsed);
-        
+
         t1 = get_time();
     #endif
 
@@ -124,7 +124,7 @@ Results* get_features(
         t2 = get_time();
         elapsed = time_diff(t1, t2);
         printf("Calculated # of nodes per partition: %f\n", elapsed);
-        
+
         t1 = get_time();
     #endif
 
@@ -149,7 +149,7 @@ Results* get_features(
             G2L_DE_mappings[partition_i] = malloc(sizeof(long) * num_edges);
         }
     }
-    
+
     #ifdef TIMING
         t2 = get_time();
         elapsed = time_diff(t1, t2);
@@ -158,7 +158,7 @@ Results* get_features(
         } else {
             printf("TIMING: Created global ID array: %f\n", elapsed);
         }
-        
+
         t1 = get_time();
     #endif
 
@@ -175,10 +175,10 @@ Results* get_features(
     }
 
     // Iterate once to calculate prefix array
-    int local_counts_array[num_partitions][num_threads]; 
+    int local_counts_array[num_partitions][num_threads];
     int prefix_array[num_partitions][num_threads];
-    long max_counts[num_partitions]; 
-    // Note: local_counts_array and prefix_array are arrays of points to arrays. This is because 
+    long max_counts[num_partitions];
+    // Note: local_counts_array and prefix_array are arrays of points to arrays. This is because
     // we need to calculate local_count for each partition. This next loop populates the arrays
 
     // Restructured code to process each edge once
@@ -222,7 +222,7 @@ Results* get_features(
             int dst_node_partition = which_partition(partition_rule, &frac_coords[3 * dst_nodes[edge_i]]);
             int position = prefix_array[dst_node_partition][thread_id] + local_offsets[dst_node_partition];
             partitions[dst_node_partition]->edges_ids[position] = edge_i;
-            
+
             if (use_bond_graph) {
                 G2L_DE_mappings[dst_node_partition][edge_i] = position;
             }
@@ -235,14 +235,14 @@ Results* get_features(
     for (unsigned int partition_i = 0; partition_i < num_partitions; partition_i++) {
         partitions[partition_i]->num_edges = max_counts[partition_i];
     }
-    
+
     // First pass to calculate local counts
     // for (unsigned int partition_i = 0; partition_i < num_partitions; partition_i++) {
     //     #pragma omp parallel private(dst_node_partition) num_threads(num_threads)
     //     {
     //         int thread_id = omp_get_thread_num();
     //         int local_count = 0;
-            
+
     //         for (long edge_i = start_ids[thread_id]; edge_i < start_ids[thread_id] + num_iters_array[thread_id]; edge_i++) {
     //             dst_node_partition = which_partition(partition_rule, &frac_coords[3 * dst_nodes[edge_i]]);
 
@@ -265,7 +265,7 @@ Results* get_features(
     //     }
     //     max_counts[partition_i] = running_sum;
     // }
-    
+
     // for (unsigned int partition_i = 0; partition_i < num_partitions; partition_i++) {
     //     #pragma omp parallel private(dst_node_partition) num_threads(num_threads)
     //     {
@@ -329,7 +329,7 @@ Results* get_features(
     long** G2L_mappings = malloc(sizeof(long*) * num_partitions); // num_partitions pointers to various arrays
     for (unsigned int partition_i = 0; partition_i < num_partitions; partition_i++) {
         G2L_mappings[partition_i] = malloc(sizeof(long) * num_nodes);
-        
+
         // set all values within the G2L_mappings to be -1 for now
         for (long node_i = 0; node_i < num_nodes; node_i++) {
             G2L_mappings[partition_i][node_i] = -1;
@@ -340,7 +340,7 @@ Results* get_features(
             G2L_mappings[partition_i][global_id_arrays[partition_i][node_i]] = node_i;
         }
     }
-    
+
     #ifdef TIMING
         t2 = get_time();
         elapsed = time_diff(t1, t2);
@@ -355,27 +355,27 @@ Results* get_features(
 
     for (unsigned int partition_i = 0; partition_i < num_partitions; partition_i++) {
         local_edges_src_nodes[partition_i] = malloc(sizeof(long) * partitions[partition_i]->num_edges);
-        local_edges_dst_nodes[partition_i] = malloc(sizeof(long) * partitions[partition_i]->num_edges);  
+        local_edges_dst_nodes[partition_i] = malloc(sizeof(long) * partitions[partition_i]->num_edges);
     }
 
     for (unsigned int partition_i = 0; partition_i < num_partitions; partition_i++) {
-        #pragma omp parallel for schedule(static, partitions[partition_i]->num_edges / num_threads) num_threads(num_threads) 
+        #pragma omp parallel for schedule(static, partitions[partition_i]->num_edges / num_threads) num_threads(num_threads)
         for (long edge_i = 0; edge_i < partitions[partition_i]->num_edges; edge_i++) {
             // Find the local node index for the global src edge node
             local_edges_src_nodes[partition_i][edge_i] = G2L_mappings[partition_i][src_nodes[partitions[partition_i]->edges_ids[edge_i]]];
             local_edges_dst_nodes[partition_i][edge_i] = G2L_mappings[partition_i][dst_nodes[partitions[partition_i]->edges_ids[edge_i]]];
 
             #ifdef DEBUG
-                // Find the global node ids of the nodes that show up as -1 
+                // Find the global node ids of the nodes that show up as -1
                 int num_missing = 0;
                 if (local_edges_src_nodes[partition_i][edge_i] == -1) {
                     printf("SRC node in partition %u with global index %ld found to be -1\n", partition_i, src_nodes[partitions[partition_i]->edges_ids[edge_i]]);
                     printf("This node's position is: %f, %f, %f\n", frac_coords[3 * src_nodes[partitions[partition_i]->edges_ids[edge_i]]],
-                                                            frac_coords[1 + (3 * src_nodes[partitions[partition_i]->edges_ids[edge_i]])], 
+                                                            frac_coords[1 + (3 * src_nodes[partitions[partition_i]->edges_ids[edge_i]])],
                                                             frac_coords[2 + (3 * src_nodes[partitions[partition_i]->edges_ids[edge_i]])]);
 
                     printf("corresponding DST node location: %f %f %f\n", frac_coords[3 * dst_nodes[partitions[partition_i]->edges_ids[edge_i]]],
-                                                            frac_coords[1 + (3 * dst_nodes[partitions[partition_i]->edges_ids[edge_i]])], 
+                                                            frac_coords[1 + (3 * dst_nodes[partitions[partition_i]->edges_ids[edge_i]])],
                                                             frac_coords[2 + (3 * dst_nodes[partitions[partition_i]->edges_ids[edge_i]])]);
                     printf("FPIS distance for this edge: %f\n", distances[partitions[partition_i]->edges_ids[edge_i]]);
                     num_missing += 1;
@@ -384,7 +384,7 @@ Results* get_features(
                 if (local_edges_dst_nodes[partition_i][edge_i] == -1) {
                     printf("DST node in partition %u with global index %ld found to be -1\n", partition_i, dst_nodes[partitions[partition_i]->edges_ids[edge_i]]);
                     printf("This node's position is: %f, %f, %f\n", frac_coords[3 * dst_nodes[partitions[partition_i]->edges_ids[edge_i]]],
-                                                            frac_coords[1 + 3 * dst_nodes[partitions[partition_i]->edges_ids[edge_i]]], 
+                                                            frac_coords[1 + 3 * dst_nodes[partitions[partition_i]->edges_ids[edge_i]]],
                                                             frac_coords[2 + 3 * dst_nodes[partitions[partition_i]->edges_ids[edge_i]]]);
                     num_missing += 1;
                 }
@@ -400,10 +400,10 @@ Results* get_features(
         t2 = get_time();
         elapsed = time_diff(t1, t2);
         printf("TIMING: Mapping usage time: %f\n", elapsed);
-        
+
         t1 = get_time();
     #endif
-    
+
     // Create bond graph ---------------------------------------------------------
     long** bond_mapping_DE;
     long** bond_mapping_BDE;
@@ -438,7 +438,7 @@ Results* get_features(
         for (unsigned int partition_i = 0; partition_i < num_partitions; partition_i++) {
             adj_lists[partition_i].array_of_entries = malloc(sizeof(AdjListEntry) * num_nodes);
             adj_lists[partition_i].num_entries = num_nodes;
-            
+
             for (long entry_i = 0; entry_i < num_nodes; entry_i++) {
                 // TODO: do one malloc instead of num_nodes amount of mallocs - HIGH PRIORITY
                 adj_lists[partition_i].array_of_entries[entry_i].edges = malloc(sizeof(BDirectedEdge*) * DEFAULT_ITEMS);
@@ -455,15 +455,15 @@ Results* get_features(
             t2 = get_time();
             elapsed = time_diff(t1, t2);
             PRINTF("TIMING: Malloc for adjlist time: %f\n", elapsed);
-            
+
             t1 = get_time();
         #endif
 
-        // Create psuedo-adjacency list for each partition. 
+        // Create psuedo-adjacency list for each partition.
         // First iterate through all edges w/ distance <= bond_r + TOL and determine if the edge belongs to our current GPU
         // TODO: this can be parallelized across multiple GPUs at the very least (if not massively parallelized with mutexes)
         long src_node;
-        long dst_node;        
+        long dst_node;
 
         PartitionTransferInfo* partition_transfer_info_tmp;
 
@@ -483,7 +483,7 @@ Results* get_features(
         // however, they are necessary to fully compute the features of the edge that we do care about. These BDEs point from border node to border node
         for (int partition_i = 0; partition_i < (int) num_partitions; partition_i++) {
             curr_BDE_id = 0;
-            
+
             for (long i = 0; i < num_within_bond_r_indices; i++) {
 
                 src_node = src_nodes[within_bond_r_indices[i]];
@@ -499,7 +499,7 @@ Results* get_features(
 
                     if (nodes_to_partition[dst_node] == partition_i) {
                         // This conditional is true if the DE is a DE that we need FROM another partition
-                        
+
                         // Create BDE
                         this_BDE = malloc(sizeof(BDirectedEdge)); // TODO: don't need to malloc one at a time...
                         this_BDE->offset = &images[3 * within_bond_r_indices[i]];
@@ -537,7 +537,7 @@ Results* get_features(
                     } else if (nodes_to_partition[dst_node] != partition_i && nodes_to_partition[dst_node] != -1) {
                         // This conditional is true if the DE is a DE that we're sending TO another partition
                         // NOTE: this means the BDE in the "to" section points to a different BDE struct than the same BDE in the corresponding "from" section. This makes sense
-                        // since each UDE struct should have different local ids depending on which partition they're a part of 
+                        // since each UDE struct should have different local ids depending on which partition they're a part of
 
                         // Create the UDE struct
                         this_BDE = malloc(sizeof(BDirectedEdge)); // TODO: don't need to malloc one at a time...
@@ -569,7 +569,7 @@ Results* get_features(
                         this_entry->num_edges += 1;
 
                         if (this_entry->num_edges % DEFAULT_ITEMS == 0) {
-                            PRINTF("reallocing edges within array of entries\n"); 
+                            PRINTF("reallocing edges within array of entries\n");
                             adj_lists[partition_i].array_of_entries[src_node].edges = realloc(adj_lists[partition_i].array_of_entries[src_node].edges, sizeof(BDirectedEdge*) * (this_entry->num_edges + DEFAULT_ITEMS));
                         }
 
@@ -617,7 +617,7 @@ Results* get_features(
                             PRINTF("reallocing entry %ld\n", src_node);
                             adj_lists[partition_i].array_of_entries[src_node].edges = realloc(adj_lists[partition_i].array_of_entries[src_node].edges, sizeof(BDirectedEdge*) * (adj_lists[partition_i].array_of_entries[src_node].num_edges + DEFAULT_ITEMS));
                         }
-                        
+
                         // Add this BDE to the pertinent Partition struct
                         partitions[partition_i]->pure_UDEs[partitions[partition_i]->num_UDEs] = this_BDE;
                         partitions[partition_i]->num_UDEs += 1;
@@ -625,7 +625,7 @@ Results* get_features(
                         // Update bond_mapping_DE and bond_mapping_UDE
                         bond_mapping_DE[partition_i][num_bond_mapping[partition_i]] = within_bond_r_indices[i];
                         bond_mapping_BDE[partition_i][num_bond_mapping[partition_i]] = this_BDE->global_id;
-                        
+
                         num_bond_mapping[partition_i] += 1;
 
                     }
@@ -665,7 +665,7 @@ Results* get_features(
         // Convert bond_mappings into local_bond_mapping_DE and local_bond_mapping_UDE
         local_bond_mapping_DE = malloc(sizeof(long*) * num_partitions);
         local_bond_mapping_BDE = malloc(sizeof(long*) * num_partitions);
-        
+
         for (unsigned int partition_i = 0; partition_i < num_partitions; partition_i++) {
             local_bond_mapping_DE[partition_i] = malloc(sizeof(long) * num_bond_mapping[partition_i]);
             local_bond_mapping_BDE[partition_i] = malloc(sizeof(long) * num_bond_mapping[partition_i]);
@@ -677,7 +677,7 @@ Results* get_features(
         }
 
         PRINTF("Converted global bond mappings into local bond mappings\n");
-    
+
         line_src_nodes = malloc(sizeof(long*) * num_partitions);
         line_dst_nodes = malloc(sizeof(long*) * num_partitions);
         center_atom_indices = malloc(sizeof(long*) * num_partitions); //  the global indices of the atoms (nodes in atom graph) that are the center nodes for this line. gets converted into local center atom indices later
@@ -686,7 +686,7 @@ Results* get_features(
         AdjListEntry* second_entry;
 
         PRINTF("Creating line graph\n");
-        // Create line graph from edge list 
+        // Create line graph from edge list
         for (unsigned int partition_i = 0; partition_i < num_partitions; partition_i++) {
 
             line_src_nodes[partition_i] = malloc(sizeof(long) * LINE_GRAPH_DEFAULT_ITEMS);
@@ -701,16 +701,16 @@ Results* get_features(
                 // Iterate through each UDE within the entry
                 for (long UDE_i = 0; UDE_i < this_entry->num_edges; UDE_i++) {
                     this_BDE = this_entry->edges[UDE_i];
-                    
+
                     // Get the second entry (which should be whatever entry that isn't entry_i)
                     second_entry = &adj_lists[partition_i].array_of_entries[this_BDE->init_dst_node];
-                    
+
                     // For each UDE in the second_entry, draw a line to UDE_j
                     for (long UDE_j = 0; UDE_j < second_entry->num_edges; UDE_j++) {
 
                         // Draw a line from this_UDE to our second_entry's UDE if the second_entry's UDE needs an incoming line
                         if (second_entry->edges[UDE_j]->needs_in_line == true) {
-                            
+
                             if (second_entry->edges[UDE_j]->init_dst_node == this_BDE->init_src_node) {
                                 continue;
                             }
@@ -755,8 +755,8 @@ Results* get_features(
         for (unsigned int partition_i = 0; partition_i < num_partitions; partition_i++) {
             PRINTF("num lines in partition %u: %ld\n", partition_i, line_num_edges[partition_i]);
         }
-        
-        
+
+
         PRINTF("first values in line src nodes: %ld, %ld, %ld, %ld\n", line_src_nodes[0][0], line_src_nodes[0][1], line_src_nodes[0][2], line_src_nodes[0][3]);
     }
     #endif
@@ -767,11 +767,11 @@ Results* get_features(
             elapsed = time_diff(t1, t2);
             printf("TIMING: Created line graph for each gpu: %f\n", elapsed);
         }
-        
+
         t1 = get_time();
     #endif
-    
-    
+
+
     // ------------------------------------------------------------------------
 
     // Rearrange node position information using the global_array_id indices
@@ -805,7 +805,7 @@ Results* get_features(
         elapsed = time_diff(t1, t2);
         printf("TIMING: Misc end tasks: %f\n", elapsed);
     #endif
-        
+
     Results* results = malloc(sizeof(Results));
     results->global_id_arrays = global_id_arrays;
     results->global_id_markers = global_id_markers;
@@ -828,12 +828,12 @@ Results* get_features(
         results->local_bond_mapping_DE = local_bond_mapping_DE;
         results->local_bond_mapping_UDE = local_bond_mapping_BDE;
         results->num_bond_mapping = num_bond_mapping;
-    
+
         results->G2L_DE_mappings = G2L_DE_mappings;// TODO: for debugging purposes. remove when complete. NOT RELIABLE
         // TODO: when removing G2L_DE_mappings, don't forget to free everything! (should be two free calls)
     }
 
-     
+
     // Run through the local_edges_src_nodes and local_edges_dst_nodes to find -1 values TODO: testing, uncomment when done
     for (unsigned int partition_i = 0; partition_i < num_partitions; partition_i++) {
         for (long edge_i = 0; edge_i < partitions[partition_i]->num_edges; edge_i++) {
@@ -848,7 +848,7 @@ Results* get_features(
             }
         }
     }
-    
+
     #ifdef DEBUG
     // Check if FPIS gave us src_nodes or dst_nodes with the value of -1
     for (unsigned int edge_i = 0; edge_i < num_edges; edge_i++) {
@@ -865,7 +865,7 @@ Results* get_features(
     // Free memory
     free(partition_rule->walls);
     free(partition_rule);
-    
+
     free(nodes_to_partition);
 
     for (unsigned int partition_i = 0; partition_i < num_partitions; partition_i++) {
@@ -880,17 +880,17 @@ Results* get_features(
                 }
 
                 free(adj_lists[partition_i].array_of_entries[entry_i].edges);
-                
+
             }
 
             free(adj_lists[partition_i].array_of_entries);
-            
+
             free(bond_mapping_DE[partition_i]);
             free(bond_mapping_BDE[partition_i]);
 
             free(G2L_BDE_mappings[partition_i]);
         }
-    } 
+    }
 
     free(G2L_mappings);
 
@@ -902,7 +902,7 @@ Results* get_features(
 
         free(adj_lists);
     }
-    
+
     #ifdef TIMING
         t2 = get_time();
         elapsed = time_diff(t1, t2);
@@ -926,7 +926,7 @@ Adds to_add UDE* to entry
 
 //     if (entry->num_edges % DEFAULT_ITEMS == 0) {
 //         entry->edges = realloc(entry->edges, sizeof(UndirectedEdge*) * (entry->num_edges + DEFAULT_ITEMS));
-        
+
 //         if (entry->edges == NULL) {
 //             printf("MEMORYERROR: not enough memory to add UDE to the current entry in our table\n");
 //         }
@@ -995,7 +995,7 @@ void localize_UDE_and_create_UDE_markers(Partition* partition, unsigned int num_
         }
     }
 
-    // Assign local_ids for from_gpu UDEs now 
+    // Assign local_ids for from_gpu UDEs now
     for (unsigned int partition_i = 0; partition_i < num_partitions; partition_i++) {
         if (partition_i == partition->gpu_id) {
             BDE_marker_array[marker_index] = index;
@@ -1020,7 +1020,7 @@ void localize_UDE_and_create_UDE_markers(Partition* partition, unsigned int num_
 Returns true if this DE is related to UDE (DE should be the opposite of the DE used to initialize UDE)
 */
 // bool DE_UDE_equivalent(UndirectedEdge* UDE, long DE_src_node, long DE_dst_node, double* DE_offset) {
-//     if 
+//     if
 //     (
 //         DE_src_node == UDE->init_src_node &&
 //         DE_dst_node == UDE->init_dst_node &&
@@ -1032,7 +1032,7 @@ Returns true if this DE is related to UDE (DE should be the opposite of the DE u
 //         return true;
 //     }
 
-//     if 
+//     if
 //     (
 //         DE_src_node == UDE->init_dst_node &&
 //         DE_dst_node == UDE->init_src_node &&
@@ -1088,7 +1088,7 @@ then the pure_dst region goes from [0, 3), there is no to_0 region (this must be
 void create_global_id_array(Partition* partition, long* global_id_array, long* global_id_marker, unsigned int num_partitions){
     long index = 0;
     long marker_index = 0;
-    
+
     // Begin with pure dst
     global_id_marker[marker_index] = index;
     marker_index += 1;
@@ -1191,7 +1191,7 @@ void assign_to_partitions_test_2(PartitionRule* partition_rule, Partition** part
     #ifdef TIMING
         struct timespec t1 = get_time();
     #endif
-    
+
 
     long src_node;
     long dst_node;
@@ -1199,7 +1199,7 @@ void assign_to_partitions_test_2(PartitionRule* partition_rule, Partition** part
     // Calculate which edge indices each thread will operate over
     int quotient = num_edges / num_threads;
     int remainder = num_edges % num_threads;
-    int start_ids[num_threads]; 
+    int start_ids[num_threads];
     int num_iters_array[num_threads];
 
     for (int i = 0; i < num_threads; i++) {
@@ -1217,7 +1217,7 @@ void assign_to_partitions_test_2(PartitionRule* partition_rule, Partition** part
         for (long edge_i = start_ids[thread_id]; edge_i < start_ids[thread_id] + num_iters_array[thread_id]; edge_i++) {
             src_node = src_nodes[edge_i];
             dst_node = dst_nodes[edge_i];
-            
+
             double* src_coords_p = &center_coords[3 * src_node];
             double* dst_coords_p = &center_coords[3 * dst_node];
 
@@ -1225,7 +1225,7 @@ void assign_to_partitions_test_2(PartitionRule* partition_rule, Partition** part
             int dst_partition_id = (int) which_partition(partition_rule, dst_coords_p);
 
             if (src_partition_id != dst_partition_id) {
-                
+
                 if (node_to_partitions_inside[src_node] != -1 && node_to_partitions_inside[src_node] != dst_partition_id) {
                     printf("ERROR: global node %ld of partition %d has edges pointing to partitions %d and %d. We partitioned with vertical walls and thus assume that each src node should only go to 1 dst node. "
                             "If you are not using vertical wall "
@@ -1242,7 +1242,7 @@ void assign_to_partitions_test_2(PartitionRule* partition_rule, Partition** part
         struct timespec t2 = get_time();
         double elapsed = time_diff(t1, t2);
         printf("First loop within assign_to_partitions_test_2: %.9f\n", elapsed);
-        
+
         t1 = get_time();
     #endif
 
@@ -1256,14 +1256,14 @@ void assign_to_partitions_test_2(PartitionRule* partition_rule, Partition** part
     Partition* dst_partition;
 
     for (long node_i = 0; node_i < num_nodes; node_i++) {
-        
+
         src_coords = &center_coords[3 * node_i];
         src_partition_id = (int) which_partition(partition_rule, src_coords);
         dst_partition_id = node_to_partitions_inside[node_i];
 
         src_partition = partitions[src_partition_id];
         dst_partition = partitions[dst_partition_id];
-        
+
         if (dst_partition_id == -1) {
 
             src_partition = partitions[src_partition_id];
@@ -1304,7 +1304,7 @@ unsigned int which_partition(PartitionRule* partition_rule, double* coords) {
     }
 
     // If we haven't returned yet, then our current node is beyond the final wall
-    return partition_rule->num_walls; 
+    return partition_rule->num_walls;
 }
 
 /*
@@ -1314,8 +1314,8 @@ void initialize_empty_partition(Partition* partition, unsigned int partition_id,
     partition->gpu_id = partition_id;
     partition->num_edges = 0;
 
-    // TODO: Currently allocating max amount of memory that these fields can take. Don't forget to free later. 
-    // May need to peform dynamic memory allocation if we run into memory issues.
+    // TODO: Currently allocating max amount of memory that these fields can take. Don't forget to free later.
+    // May need to perform dynamic memory allocation if we run into memory issues.
     partition->edges_ids = malloc(sizeof(long) * num_edges);
     partition->num_pure_dst_nodes = 0;
     partition->pure_dst_nodes = malloc(sizeof(long) * num_nodes);
@@ -1340,7 +1340,7 @@ void initialize_empty_partition(Partition* partition, unsigned int partition_id,
 
             partition->transfer_info[i]->edges_from_gpu = malloc(sizeof(BDirectedEdge*) * DEFAULT_ITEMS);
             partition->transfer_info[i]->edges_to_gpu = malloc(sizeof(BDirectedEdge*) * DEFAULT_ITEMS);
-            
+
             partition->transfer_info[i]->num_edges_from_gpu = 0;
             partition->transfer_info[i]->num_edges_to_gpu = 0;
         }
@@ -1367,7 +1367,7 @@ void create_partition(PartitionRule* partition, double* center_coords, long num_
     for (long i = 1; i < num_nodes; i++) {
         update_max_min(&center_coords[3 * i], &max_0, &min_0);
         update_max_min(&center_coords[3 * i + 1], &max_1, &min_1);
-        update_max_min(&center_coords[3 * i + 2], &max_2, &min_2);        
+        update_max_min(&center_coords[3 * i + 2], &max_2, &min_2);
     }
 
     // TODO: testing, remove when done. Print all dim min and dim maxes
@@ -1380,15 +1380,15 @@ void create_partition(PartitionRule* partition, double* center_coords, long num_
 
     double diffs[] = {diff_0, diff_1, diff_2};
 
-    
+
     unsigned int longest_dim = 0;
     double longest_dim_length = diffs[0];
-    
+
 
     for (unsigned int i = 1; i < 3; i++) {
         if (diffs[i] > longest_dim_length) {
             longest_dim = i;
-            longest_dim_length = diffs[i];        
+            longest_dim_length = diffs[i];
         }
     }
 
@@ -1405,7 +1405,7 @@ void create_partition(PartitionRule* partition, double* center_coords, long num_
     PRINTF("Fractional longest dim min: %f\n", frac_min);
 
     longest_dim_frac_length = frac_max - frac_min;
-    PRINTF("Longest dim length in fractional coordinates: %lf\n", longest_dim_frac_length); 
+    PRINTF("Longest dim length in fractional coordinates: %lf\n", longest_dim_frac_length);
 
 
     // Creating the Partition object
@@ -1413,7 +1413,7 @@ void create_partition(PartitionRule* partition, double* center_coords, long num_
     partition->dim_to_use = longest_dim;
     partition->max_val = frac_max;
     partition->min_val = frac_min;
-    
+
     double* walls = malloc(sizeof(double) * partition->num_walls);
 
     for (unsigned int i = 1; i < num_partitions; i++) {
@@ -1424,7 +1424,7 @@ void create_partition(PartitionRule* partition, double* center_coords, long num_
 
     // Check if there are any atoms directly on the walls themselves. If this is the case, move the wall.
     bool has_collisions = true;
-    
+
     while (has_collisions) {
         has_collisions = false;
         PRINTF("Checking collisions... \n");
@@ -1444,7 +1444,7 @@ void create_partition(PartitionRule* partition, double* center_coords, long num_
 void update_max_min(double* curr_val, double* max, double* min) {
     if (*curr_val > *max) {
         *max = *curr_val;
-    } 
+    }
 
     if (*curr_val < *min) {
         *min = *curr_val;

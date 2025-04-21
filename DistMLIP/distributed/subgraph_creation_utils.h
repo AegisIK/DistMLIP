@@ -35,7 +35,7 @@ typedef struct _Partition {
     long num_edges;
     long* edges_ids; // global indices to the edges in src_nodes and dst_nodes that are pure edges
     PartitionTransferInfo** transfer_info; // List of PartitionTransferInfo pointers representing data to transfer to/from various GPUs
-                                          // The gpu_id index of this list will be the NULL pointer 
+                                          // The gpu_id index of this list will be the NULL pointer
     long* pure_dst_nodes; // nodes that don't get transferred to/from various GPUs
     long num_pure_dst_nodes;
 
@@ -46,7 +46,7 @@ typedef struct _Partition {
 
 
 typedef struct PartitionTransferInfo {
-    unsigned int other_gpu_id; // ID of the gpu/partition that we're keeping track of to/from data for 
+    unsigned int other_gpu_id; // ID of the gpu/partition that we're keeping track of to/from data for
     long* to_gpu; // list of nodes that we send to other_gpu_id. this may hold duplicate information as the other_gpu_id's partition's from_gpu data. that's okay though
     long* from_gpu; // list of nodes that we receive from other_gpu_id
     long num_to_gpu; // # of nodes to_gpu
@@ -126,7 +126,7 @@ Results* get_features(
     long* src_nodes,
     long* dst_nodes,
     double* center_coords, // cartesian coordinates of each node: (num_nodes, 3)
-    long num_nodes, 
+    long num_nodes,
     unsigned int num_partitions,
     double atom_cutoff,
     double* distances, // shape: (num_edges, )

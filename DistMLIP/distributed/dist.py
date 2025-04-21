@@ -146,7 +146,7 @@ class Distributed:
     
     def atom_transfer(self, features):
         """
-        Updates the atom graph node features such that each gpu has the most up to date features. 
+        Updates the atom graph node features such that each gpu has the most up to date features.
         """
 
         return self.transfer_nodes(features, self.markers)
@@ -189,9 +189,23 @@ class Distributed:
     def num_atoms(self, partition):
         return len(self.local_coords[partition])
 
+    def num_atom_edges(self, partition):
+        return len(self.src_nodes[partition])
+
     def num_bonds(self, partition):
         assert self.use_bond_graph, "num_bonds only works when bond graph is enabled"
         return self.line_markers[partition][-1]
+    
+    def num_bond_edges(self, partition):
+        assert self.use_bond_graph, "num_bond_edges only works when bond graph is enabled"
+        return len(self.line_src_nodes[partition])
+
+    def num_atom_border_nodes(self, partition):
+        return self.num_atoms(partition) - self.markers[partition][1 + self.num_partitions]
+
+    def num_bond_border_nodes(self, partition):
+        assert self.use_bond_graph, "num_bond_border_nodes only works when bond graph is enabled"
+        return self.num_bonds(partition) - self.line_markers[partition][1 + self.num_partitions]
 
     def global_to_local_nodes(self, global_node_features, partition, device="cpu", inplace=False):
         if inplace:
@@ -226,3 +240,22 @@ class Distributed:
         Transfers node features in bond graph to edge features in atom graph
         """
         atom_edge_features[partition][self.bond_mapping_DE_list[partition]] = bond_node_features[partition][self.bond_mapping_UDE_list[partition]]
+
+    def __repr__(self):
+        val =  f"""Distributed: 
+    Total num atoms: {self.total_num_nodes}
+    Total num edges: {self.total_num_edges}
+    Bond graph exists: {self.use_bond_graph}\n"""
+        
+        for i in range(self.num_partitions):
+            val += f"Partition {i}:\n"
+            val += f"\t# of atom graph nodes: {self.num_atoms(i)} ({self.num_atom_border_nodes(i)} border nodes)\n"
+            val += f"\t# of atom graph edges: {len(self.src_nodes[i])}"
+
+            if self.use_bond_graph:
+                val += f"\t# of bond graph nodes: {self.num_bonds(i)}. ({self.num_bond_border_nodes(i)} border nodes)\n"
+                val += f"\t# of bond graph edges: {self.num_bond_edges(i)}"
+            
+            val += "\n"
+
+        return val

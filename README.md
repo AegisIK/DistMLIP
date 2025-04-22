@@ -1,3 +1,8 @@
+<p align="center">
+  <img src="assets/logo.png" width="400" alt="Alt text">
+</p>
+
+
 # DistMLIP: An Inference Platform for Fast, Large Scale Atomistic Simulation
 
 ## About

@@ -58,8 +58,8 @@ class CHGNet_Dist(CHGNet):
         atom_graphs = []
         for partition_i, gpu_index in enumerate(self.gpus):
             # Clone big_graph_positions and index to get the positions we want
-            this_gpu_positions = dist_info.global_to_local_nodes(big_graph_positions, partition_i, inplace=False, device=gpu_index)
-            this_gpu_node_types = dist_info.global_to_local_nodes(node_types, partition_i, inplace=False, device=gpu_index)
+            this_gpu_positions = dist_info.global_to_local_nodes(big_graph_positions, partition_i, device=gpu_index)
+            this_gpu_node_types = dist_info.global_to_local_nodes(node_types, partition_i, device=gpu_index)
 
             this_gpu_atom_g = dgl.graph((dist_info.src_nodes[partition_i], dist_info.dst_nodes[partition_i]), num_nodes=dist_info.num_atoms(partition_i)).to(gpu_index)
 
@@ -79,8 +79,8 @@ class CHGNet_Dist(CHGNet):
 
         for partition_i, gpu_index in enumerate(self.gpus):
             # Distribute big_bond_vec and big_bond_dist
-            atom_graphs[partition_i].edata["bond_vec"] = dist_info.global_to_local_edges(big_bond_vec, partition_i, inplace=True, device=gpu_index)
-            atom_graphs[partition_i].edata["bond_dist"] = dist_info.global_to_local_edges(big_bond_dist, partition_i, inplace=True, device=gpu_index)
+            atom_graphs[partition_i].edata["bond_vec"] = dist_info.global_to_local_edges(big_bond_vec, partition_i, device=gpu_index)
+            atom_graphs[partition_i].edata["bond_dist"] = dist_info.global_to_local_edges(big_bond_dist, partition_i, device=gpu_index)
             
 
             # Element-wise expansion + polynomial cutoff for edata in atom graph

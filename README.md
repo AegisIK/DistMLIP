@@ -3,7 +3,7 @@
 </p>
 
 
-# DistMLIP: An Inference Platform for Fast, Large Scale Atomistic Simulation
+# DistMLIP: A Distributed Inference Platform for Fast, Large Scale Atomistic Simulation
 
 ## About
 DistMLIP is an easy-to-use, efficient library for running large-scale multi-GPU simulations using popular machine learning interatomic potentials (MLIPs). 
@@ -31,6 +31,8 @@ TODO
 
 Perform inference:
 TODO
+
+> Although it is supported via DistMLIP, it is recommended to finetune your model using the original model library before loading your model into DistMLIP via `from_existing` and running distributed inference.
 
 Currently only single node inference is supported. Multi-machine inference is future work. 
 

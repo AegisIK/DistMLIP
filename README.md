@@ -15,13 +15,22 @@ DistMLIP currently supports the following models:
 * TensorNet ([MatGL](https://github.com/materialsvirtuallab/matgl))
 * MACE (future work planned)
 
+- CHGNet ([MatGL](https://github.com/materialsvirtuallab/matgl))
+- TensorNet ([MatGL](https://github.com/materialsvirtuallab/matgl))
+- MACE (future work planned)
 
 **Performance Benchmark**
 TODO (going to redirect the user to benchmark folder and show a FPIS benchmark + bring up some figures from the paper)
 
 ## Getting Started
 Install DistMLIP from pip or from source:
-TODO
+
+```bash
+git clone git@github.com:AegisIK/DistMLIP.git
+cd DistMLIP
+pip install -e .
+python setup.py build_ext --inplace
+```
 
 Convert your model into its DistMLIP distributed version:
 TODO
@@ -31,8 +40,6 @@ TODO
 
 Perform inference:
 TODO
-
-> Although it is supported via DistMLIP, it is recommended to finetune your model using the original model library before loading your model into DistMLIP via `from_existing` and running distributed inference.
 
 Currently only single node inference is supported. Multi-machine inference is future work. 
 

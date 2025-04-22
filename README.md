@@ -17,14 +17,31 @@ DistMLIP currently supports the following models:
 
 
 **Performance Benchmark**
-TODO
+TODO (going to redirect the user to benchmark folder and show a FPIS benchmark + bring up some figures from the paper)
 
 ## Getting Started
 Install DistMLIP from pip or from source:
 TODO
 
+Convert your model into its DistMLIP distributed version:
+TODO
+
+Enable distributed mode:
+TODO
+
+Perform inference:
+TODO
+
+Currently only single node inference is supported. Multi-machine inference is future work. 
+
 View one of our example notebooks [here](./examples) to get started. DistMLIP is a mix-in library designed to inherit other models. As a result, all features of the original package (whether it's MatGL or MACE) should still work.
 
+## Roadmap
+- [x] Distributing CHGNet
+- [x] Distributing TensorNet
+- [ ] Distributing MACE
+- [ ] Multi-machine inference
+- [ ] LAMMPS integration
 
 ## Citation
 If you use DistMLIP in your research, please cite our paper:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
-from matgl.distributed.subgraph_creation_fast import get_subgraphs_fast
+from DistMLIP.distributed.subgraph_creation_fast import get_subgraphs_fast
 import torch
 from typing import List, Tuple, Optional, Union
 
@@ -46,17 +46,17 @@ class Distributed:
                different types of nodes within a partition (e.g., pure nodes, border
                nodes shared with specific other partitions).
                The structure of 1 numpy array in the list, for an n partition system, is:
-               [0, pure nodes, to_0, to_1, ..., to_n, from_0, from_1, ... from_n]. The 
+               [0, pure nodes, to_0, to_1, ..., to_n, from_0, from_1, ... from_n]. The
                elememnt in the list is the total number of atoms within a partition
-               (including border nodes). Used in transferring node information 
+               (including border nodes). Used in transferring node information
                between atom graphs.
             local_coords (list): List of numpy arrays, each holding the Cartesian
-               coordinates of nodes (atoms) within atom graph within that partition 
+               coordinates of nodes (atoms) within atom graph within that partition
                (including border nodes).
             global_ids (list): List of numpy arrays. Each array maps local node indices
                in a partition to their original global node IDs. Therefore,
                global_ids[x][i] refers to the global id corresponding to local node
-               i in partition x. 
+               i in partition x.
             py_index_1 (np.ndarray): Global source node indices for all edges across
                all partitions (concatenated) for atom graph. Often corresponds to the full,
                non-distributed graph's edge index.
@@ -74,11 +74,11 @@ class Distributed:
                of all edges that are within the bond cutoff.
             line_markers (list): List of numpy arrays, similar to `markers` but for the
                bond graph nodes.
-            num_UDEs_per_partition (list): Number of nodes in bond graph in each 
+            num_UDEs_per_partition (list): Number of nodes in bond graph in each
                partition.
             bond_mapping_DE_list (list): List of numpy arrays. Maps directed edge
                indices (in atom graph) to their corresponding indices within the local
-               partition's bond graph (bond graph nodes). To be used in 
+               partition's bond graph (bond graph nodes). To be used in
                conjunction with bond_mapping_UDE_list. See the `edge_to_bond` method
                for reference.
             bond_mapping_UDE_list (list): List of numpy arrays. Maps unique directed
@@ -92,7 +92,7 @@ class Distributed:
                indices to local directed edge indices. Note: This is deprecated and not reliable.
                Do not use this variable.
             local_center_atom_indices_list (list): List of numpy arrays, containing indices of
-               the 'center' atoms (atom graph node) for each bond graph edge. This refers to the 
+               the 'center' atoms (atom graph node) for each bond graph edge. This refers to the
                atom that is at the center of each angle represented by an edge within the bond graph.
             use_bond_graph (bool): Flag indicating if bond graph information is
                included and should be used.
@@ -150,7 +150,7 @@ class Distributed:
 
         Args:
             cart_coords (np.ndarray): Cartesian coordinates of all atoms (N x 3).
-            frac_coords (np.ndarray): Fractional coordinates of all atoms (N x 3). Fractional coordinates should be wrapped. 
+            frac_coords (np.ndarray): Fractional coordinates of all atoms (N x 3). Fractional coordinates should be wrapped.
             lattice_matrix (np.ndarray): Lattice vectors (3 x 3).
             num_partitions (int): The desired number of partitions (e.g., number of GPUs).
             pbc (Tuple[bool, bool, bool]): Periodic boundary conditions along each lattice vector direction.
@@ -284,7 +284,9 @@ class Distributed:
 
             this_partition_global_ids = this_global_ids[:this_cutoff]
 
-            combined_feats[this_partition_global_ids] = features_to_aggregate[partition_i][:this_cutoff].to(device)
+            combined_feats[this_partition_global_ids] = features_to_aggregate[
+                partition_i
+            ][:this_cutoff].to(device)
 
         return combined_feats
 
@@ -320,7 +322,7 @@ class Distributed:
                 to_end = markers[to][1 + self.num_partitions + curr + 1]
 
                 # Only attempt to transfer if there is stuff to transfer
-                if (from_start != from_end):  
+                if from_start != from_end:
                     features[to][to_start:to_end] = features[curr][from_start:from_end]
 
         return features
@@ -350,7 +352,9 @@ class Distributed:
         Returns:
             The updated list of bond node feature tensors.
         """
-        assert self.use_bond_graph, "Cannot transfer border nodes if use_bond_graph is False"
+        assert (
+            self.use_bond_graph
+        ), "Cannot transfer border nodes if use_bond_graph is False"
         return self.transfer_nodes(features, self.line_markers)
 
     def aggregate_atom_edge(
@@ -417,7 +421,9 @@ class Distributed:
         ]
 
         for i in range(self.num_partitions):
-            atom_edge_features_placeholders[i][self.bond_mapping_DE_list[i]] = bond_node_features[i][self.bond_mapping_UDE_list[i]]
+            atom_edge_features_placeholders[i][self.bond_mapping_DE_list[i]] = (
+                bond_node_features[i][self.bond_mapping_UDE_list[i]]
+            )
 
         return self.aggregate_atom_edge(
             atom_edge_features_placeholders, gpu_to_aggregate_to=gpu_to_aggregate_to
@@ -434,7 +440,7 @@ class Distributed:
             Number of local atoms in the partition.
         """
         return len(self.local_coords[partition])
-    
+
     def num_atom_edges(self, partition):
         """
         Returns the total number of edges within the atom graph of a partition.
@@ -449,7 +455,7 @@ class Distributed:
 
     def num_bonds(self, partition: int) -> int:
         """
-        Returns the total number of local bond graph nodes in a partition. 
+        Returns the total number of local bond graph nodes in a partition.
         Includes border nodes.
 
         Requires `use_bond_graph` to be True.
@@ -475,7 +481,9 @@ class Distributed:
         Returns:
             Number of local bond graph edges in the partition.
         """
-        assert self.use_bond_graph, "num_bond_edges only works when bond graph is enabled"
+        assert (
+            self.use_bond_graph
+        ), "num_bond_edges only works when bond graph is enabled"
         return len(self.line_src_nodes[partition])
 
     def num_atom_border_nodes(self, partition):
@@ -488,22 +496,29 @@ class Distributed:
         Returns:
             Number of local atom graph border nodes in the partition.
         """
-        return self.num_atoms(partition) - self.markers[partition][1 + self.num_partitions]
+        return (
+            self.num_atoms(partition) - self.markers[partition][1 + self.num_partitions]
+        )
 
     def num_bond_border_nodes(self, partition):
         """
         Returns the number of bond graph border nodes in a partition.
 
         Requires `use_bond_graph` to be True
-        
+
         Args:
             partition: The partition index.
 
         Returns:
-            Number of locla bond graph border ndoes in the partition.
+            Number of local bond graph border nodes in the partition.
         """
-        assert self.use_bond_graph, "num_bond_border_nodes only works when bond graph is enabled"
-        return self.num_bonds(partition) - self.line_markers[partition][1 + self.num_partitions]
+        assert (
+            self.use_bond_graph
+        ), "num_bond_border_nodes only works when bond graph is enabled"
+        return (
+            self.num_bonds(partition)
+            - self.line_markers[partition][1 + self.num_partitions]
+        )
 
     def global_to_local_nodes(
         self,
@@ -588,7 +603,9 @@ class Distributed:
         bond_features = torch.zeros(
             (self.num_bonds(partition),) + tuple(edge_features.shape[1:]), device=device
         )
-        bond_features[self.bond_mapping_UDE_list[partition]] = edge_features[self.bond_mapping_DE_list[partition]]
+        bond_features[self.bond_mapping_UDE_list[partition]] = edge_features[
+            self.bond_mapping_DE_list[partition]
+        ]
 
         return bond_features
 
@@ -617,11 +634,11 @@ class Distributed:
         )
 
     def __repr__(self):
-        val =  f"""Distributed: 
+        val = f"""Distributed:
     Total num atoms: {self.total_num_nodes}
     Total num edges: {self.total_num_edges}
     Bond graph exists: {self.use_bond_graph}\n"""
-        
+
         for i in range(self.num_partitions):
             val += f"Partition {i}:\n"
             val += f"\t# of atom graph nodes: {self.num_atoms(i)} ({self.num_atom_border_nodes(i)} border nodes)\n"
@@ -630,7 +647,7 @@ class Distributed:
             if self.use_bond_graph:
                 val += f"\t# of bond graph nodes: {self.num_bonds(i)}. ({self.num_bond_border_nodes(i)} border nodes)\n"
                 val += f"\t# of bond graph edges: {self.num_bond_edges(i)}"
-            
+
             val += "\n"
 
         return val

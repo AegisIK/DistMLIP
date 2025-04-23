@@ -7,43 +7,6 @@ from copy import deepcopy
 
 
 class TensorNet_Dist(TensorNet):
-    def enable_distributed_mode(self, gpus):
-        if self.dist_enabled:
-            raise Exception("Current model already has distributed mode enabled.")
-
-        # Move everything back to cpu first, the only things on GPU should be the following attributes:
-        self.to("cpu")
-
-        self.gpus = []
-
-        for gpu_index in gpus:
-            if gpu_index == "cpu":
-                self.gpus.append("cpu")
-            else:
-                self.gpus.append("cuda:" + str(gpu_index))
-
-        self.bond_expansion_dist = [
-            deepcopy(self.bond_expansion).to(gpu_index).eval().to(self.dtype)
-            for gpu_index in gpus
-        ]
-        self.tensor_embedding_dist = [
-            deepcopy(self.tensor_embedding).to(gpu_index).eval().to(self.dtype)
-            for gpu_index in gpus
-        ]
-        self.layers_dist = [
-            [
-                deepcopy(layer).to(gpu_index).eval().to(self.dtype)
-                for layer in self.layers
-            ]
-            for gpu_index in gpus
-        ]
-
-        self.linear_dist = deepcopy(self.linear).eval().to(self.gpus[0])
-        self.final_layer_dist = deepcopy(self.final_layer).eval().to(self.gpus[0])
-        self.out_norm_dist = deepcopy(self.out_norm).eval().to(self.gpus[0])
-
-        self.dist_enabled = True
-
     def potential_forward_dist(
         self,
         dist_info,
@@ -197,17 +160,53 @@ class TensorNet_Dist(TensorNet):
 
         return torch.squeeze(output)
 
+    def enable_distributed_mode(self, gpus):
+        if hasattr(self, "dist_enabled") and self.dist_enabled:
+            raise Exception("Current model already has distributed mode enabled.")
+
+        # Move everything back to cpu first, the only things on GPU should be the following attributes:
+        self.to("cpu")
+
+        self.gpus = []
+
+        for gpu_index in gpus:
+            if gpu_index == "cpu":
+                self.gpus.append("cpu")
+            else:
+                self.gpus.append("cuda:" + str(gpu_index))
+
+        self.bond_expansion_dist = [
+            deepcopy(self.bond_expansion).to(gpu_index).eval().to(self.dtype)
+            for gpu_index in gpus
+        ]
+        self.tensor_embedding_dist = [
+            deepcopy(self.tensor_embedding).to(gpu_index).eval().to(self.dtype)
+            for gpu_index in gpus
+        ]
+        self.layers_dist = [
+            [
+                deepcopy(layer).to(gpu_index).eval().to(self.dtype)
+                for layer in self.layers
+            ]
+            for gpu_index in gpus
+        ]
+
+        self.linear_dist = deepcopy(self.linear).eval().to(self.gpus[0])
+        self.final_layer_dist = deepcopy(self.final_layer).eval().to(self.gpus[0])
+        self.out_norm_dist = deepcopy(self.out_norm).eval().to(self.gpus[0])
+
+        self.element_to_index = {
+            elem: idx for idx, elem in enumerate(self.element_types)
+        }
+        self.dist_enabled = True
+
     @classmethod
     def from_existing(cls, model, dtype=DistMLIP.float_th):
         model.to("cpu")
         dist_model = cls.__new__(cls)
         dist_model.__dict__ = model.__dict__.copy()
 
-        # Add additional fields
         dist_model.dist_enabled = False
-        dist_model.element_to_index = {
-            elem: idx for idx, elem in enumerate(dist_model.element_types)
-        }
         dist_model.dtype = dtype
 
         return dist_model

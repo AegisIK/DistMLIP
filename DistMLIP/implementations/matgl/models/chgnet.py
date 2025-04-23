@@ -550,8 +550,10 @@ class CHGNet_Dist(CHGNet):
 
     @classmethod
     def from_existing(cls, model, dtype=DistMLIP.float_th):
+        model.to("cpu")
         dist_model = cls.__new__(cls)
         dist_model.__dict__ = model.__dict__.copy()
+
         dist_model.dist_enabled = False
         dist_model.dtype = dtype
 

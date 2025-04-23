@@ -137,6 +137,7 @@ class TensorNet_Dist(TensorNet):
         model.to("cpu")
         dist_model = cls.__new__(cls)
         dist_model.__dict__ = model.__dict__.copy()
+        dist_model.dist_enabled = False
 
         return dist_model
         

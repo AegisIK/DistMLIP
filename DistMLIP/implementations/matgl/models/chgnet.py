@@ -263,7 +263,7 @@ class CHGNet_Dist(CHGNet):
 
     def enable_distributed_mode(self, gpus):
         """Should only be done when you wish to make forward passes in distributed mode"""
-        if self.dist_enabled:
+        if hasattr(self, "dist_enabled") and self.dist_enabled:
             raise Exception("Current model already has distributed mode enabled.")
 
         # Move everything back to cpu first, the only things on GPU should be the following attributes:

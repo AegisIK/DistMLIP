@@ -21,7 +21,16 @@ TODO (going to redirect the user to benchmark folder and show a FPIS benchmark +
 
 ## Getting Started
 
-Install DistMLIP from pip or from source:
+1. Install PyTorch here: TODO
+
+2. Install DGL here (if using the MatGL models): TODO
+
+3. Install DistMLIP from pip 
+```
+ENTER HERE
+```
+
+or from source:
 
 ```bash
 git clone git@github.com:AegisIK/DistMLIP.git
@@ -30,20 +39,20 @@ pip install -e .
 python setup.py build_ext --inplace
 ```
 
-Convert your model into its DistMLIP distributed version:
+4. Convert your model into its DistMLIP distributed version:
 TODO
 
-Enable distributed mode:
+5. Enable distributed mode:
 TODO
 
-Perform inference:
+6. Perform inference:
 TODO
 
 > Although it is supported via DistMLIP, it is recommended to finetune your model using the original model library before loading your model into DistMLIP via `from_existing` and running distributed inference.
 
 Currently only single node inference is supported. Multi-machine inference is future work.
 
-View one of our example notebooks [here](./examples) to get started. DistMLIP is a mix-in library designed to inherit other models. As a result, all features of the original package (whether it's MatGL or MACE) should still work.
+View one of our example notebooks [here](./examples) to get started. DistMLIP is a wrapper library designed to inherit other models. As a result, all features of the original package (whether it's MatGL or MACE) should still work.
 
 ## Roadmap
 

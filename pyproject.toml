@@ -1,3 +1,31 @@
 [build-system]
 requires = ["setuptools>=61.0", "wheel", "numpy>=1.26.3"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "DistMLIP"
+version = "0.1.0"
+authors = [
+    { name = "Kevin Han" },
+    { name = "Bowen Deng" }
+]
+description = "DistMLIP is a fast, efficient, distributed inference library for graph-based machine learning interatomic potentials. DistMLIP supports ultra-fast and ultra-large scale atomistic simulation."
+readme = { file = "README.md", content-type = "text/markdown" }
+license = { text = "Apache" }
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26.3",
+    "matgl>=1.2.6",
+    "dgl>=2.1.0",
+    "torch<=2.4.0",
+    "matgl @ git+https://github.com/materialsvirtuallab/matgl.git@5171392"
+    
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: C",
+    "Operating System :: OS Independent"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]

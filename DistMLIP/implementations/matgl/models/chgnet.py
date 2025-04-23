@@ -2,6 +2,7 @@ import torch
 import dgl
 import numpy as np
 import DistMLIP
+from torch import nn
 
 from dgl import readout_nodes
 from matgl.models import CHGNet
@@ -10,7 +11,7 @@ from copy import deepcopy
 from matgl.graph.compute import (
     compute_theta,
 )
-
+from DistMLIP.implementations.matgl.models.chgnet_layers import CHGNetBondGraphBlock_Dist
 
 class CHGNet_Dist(CHGNet):
     """Main CHGNet model."""
@@ -506,9 +507,10 @@ class CHGNet_Dist(CHGNet):
         self.atom_graph_layers_dist = [
             deepcopy(self.atom_graph_layers).to(gpu_index).eval() for gpu_index in gpus
         ]
+        print(self.bond_graph_layers)
         self.bond_graph_layers_dist = (
             [
-                deepcopy(self.bond_graph_layers).to(gpu_index).eval()
+                nn.ModuleList([CHGNetBondGraphBlock_Dist.from_existing(deepcopy(self.bond_graph_layers[i])) for i in range(self.n_blocks - 1)]).to(gpu_index).eval()
                 for gpu_index in gpus
             ]
             if self.use_bond_graph

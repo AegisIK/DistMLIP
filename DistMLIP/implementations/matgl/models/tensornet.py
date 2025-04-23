@@ -202,7 +202,12 @@ class TensorNet_Dist(TensorNet):
         model.to("cpu")
         dist_model = cls.__new__(cls)
         dist_model.__dict__ = model.__dict__.copy()
+
+        # Add additional fields
         dist_model.dist_enabled = False
+        dist_model.element_to_index = {
+            elem: idx for idx, elem in enumerate(dist_model.element_types)
+        }
         dist_model.dtype = dtype
 
         return dist_model

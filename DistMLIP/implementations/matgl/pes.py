@@ -7,6 +7,8 @@ from DistMLIP.distributed.dist import Distributed
 from matgl.apps.pes import Potential
 from matgl.utils.io import IOMixIn
 
+from time import perf_counter
+
 
 class Potential_Dist(Potential, IOMixIn):
     """A class representing an interatomic potential."""
@@ -71,6 +73,9 @@ class Potential_Dist(Potential, IOMixIn):
         pbc = np.array([1, 1, 1], dtype=int)
         num_partitions = len(self.model.gpus)
 
+        # TODO: testing, remove when done
+        start = perf_counter()
+        
         dist_info = Distributed.create_distributed(cart_coords=cart_coords,
                                                     frac_coords=frac_coords,
                                                     lattice_matrix=lattice_matrix,
@@ -82,7 +87,8 @@ class Potential_Dist(Potential, IOMixIn):
                                                     tol=tol,
                                                     num_threads=num_threads
                                                 )
-
+        
+        print("Distributed object creation:", perf_counter() - start)
 
         model_out = self.model.potential_forward_dist(
             dist_info,

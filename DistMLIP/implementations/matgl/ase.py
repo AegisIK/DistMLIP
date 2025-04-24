@@ -33,8 +33,8 @@ from pymatgen.io.ase import AseAtomsAdaptor
 
 from matgl.ext.ase import TrajectoryObserver
 
-
-
+# TODO: testing, remove when done
+from time import perf_counter
 
 class OPTIMIZERS(Enum):
     """An enumeration of optimizers for used in."""
@@ -72,6 +72,9 @@ class PESCalculator_Dist(PESCalculator):
 
         assert isinstance(self.potential, Potential_Dist), \
             ("PESCalculatorDist requires using a Potential_Dist.")
+        
+        # TODO: testing, remove when done
+        self.last_count = None
 
     def calculate(  # type:ignore[override]
         self,
@@ -92,6 +95,12 @@ class PESCalculator_Dist(PESCalculator):
         properties = properties or ["energy"]
         system_changes = system_changes or all_changes
         Calculator.calculate(self, atoms=atoms, properties=properties, system_changes=system_changes)
+
+        # TODO: testing remove when done
+        current_count = perf_counter()
+        if self.last_count:
+            print("Step time:", current_count - self.last_count)
+        self.last_count=current_count
         
         # type: ignore
         if self.state_attr is not None:

@@ -2,7 +2,7 @@
   <img src="assets/logo.png" width="400" alt="Alt text">
 </p>
 
-# DistMLIP: A Distributed Inference Platform for Fast, Large Scale Atomistic Simulation
+# DistMLIP: A Distributed Inference Library for Fast, Large Scale Atomistic Simulation
 
 ## About
 

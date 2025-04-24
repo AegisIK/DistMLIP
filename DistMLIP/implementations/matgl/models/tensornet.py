@@ -117,6 +117,11 @@ class TensorNet_Dist(TensorNet):
         )
 
     def dist_forward(self, atom_graphs, X_feats, dist_info):
+        # TODO: testing, remove when done
+        to_print = [f"Graph {i}: {atom_graphs[i].number_of_edges()}" for i in range(len(atom_graphs))]
+        print(", ".join(to_print))
+
+
         # Interaction layers
         for layer_i in range(len(self.layers)):
             for partition_i, gpu_index in enumerate(self.gpus):
@@ -158,7 +163,16 @@ class TensorNet_Dist(TensorNet):
         big_graph_placeholder.ndata["atom_features"] = x
         output = dgl.readout_nodes(big_graph_placeholder, "atom_features", op="sum")
 
+        # TODO: testing, remove when done
+        num_gpus = 8  # You can also use torch.cuda.device_count() if dynamic
+        allocated = [torch.cuda.memory_allocated(i) / 1024**3 for i in range(num_gpus)]
+        reserved = [torch.cuda.memory_reserved(i) / 1024**3 for i in range(num_gpus)]
+
+        print("Allocated (GB):", ["{:.2f}".format(a) for a in allocated])
+        print("Reserved  (GB):", ["{:.2f}".format(r) for r in reserved])
+
         return torch.squeeze(output)
+        
 
     def enable_distributed_mode(self, gpus):
         if hasattr(self, "dist_enabled") and self.dist_enabled:

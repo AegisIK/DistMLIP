@@ -507,7 +507,7 @@ class CHGNet_Dist(CHGNet):
         self.atom_graph_layers_dist = [
             deepcopy(self.atom_graph_layers).to(gpu_index).eval() for gpu_index in gpus
         ]
-        print(self.bond_graph_layers)
+
         self.bond_graph_layers_dist = (
             [
                 nn.ModuleList([CHGNetBondGraphBlock_Dist.from_existing(deepcopy(self.bond_graph_layers[i])) for i in range(self.n_blocks - 1)]).to(gpu_index).eval()

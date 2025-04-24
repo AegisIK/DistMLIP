@@ -1505,12 +1505,10 @@ int check_partition_size(unsigned int num_partitions, PartitionRule* partition_r
     if (partition_width <= 2 * (atom_cutoff + bond_cutoff) && use_bond_graph) {
         printf("Bond graph is enabled but atom_cutoff is %f and bond_cutoff is %f. The partition width is %f which is <= 2 * (atom_cutoff + bond_cutoff) (%f).\nA wall width that is <= 2 * (atom_cutoff + bond_cutoff) will be inefficient.\n", atom_cutoff, bond_cutoff, partition_width, 2 * (atom_cutoff + bond_cutoff));
         printf("You should reduce the # of partitions. If you cannot fit your system on a reduced # of partitions, then your system is probably too dense\nNo vanilla distributed graph algorithm will be able to help you. Contact Kevin (kevinhan@cmu.edu) if you need help with this.\n");
-        // printf("Going to fall back to non-distributed inference. But do try to fit your system on a reduced # of partitions.\n");
         return -1;
     } else if (partition_width <= 2 * atom_cutoff && !use_bond_graph) {
         printf("Bond graph is disabled and atom_cutoff is %f. Total wall width is %f which is <= 2 * (atom_cutoff) (%f).\nA wall width that is <= 2 * (atom_cutoff) will be inefficient.\n", atom_cutoff, partition_width, 2 * (atom_cutoff));
         printf("You should reduce the # of partitions. If you cannot fit your system on a reduced # of partitions, then your system is probably too dense\nNo vanilla distributed graph algorithm will be able to help you. Contact Kevin (kevinhan@cmu.edu) if you need help with this.\n");
-        // printf("Going to fall back to non-distributed inference. But do try to fit your system on a reduced # of partitions.\n");
         return -1;
     }
     return 0;

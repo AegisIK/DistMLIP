@@ -38,7 +38,7 @@ Results* get_features(
     double* images, // shape: (num_edges, 3), c-contiguous (contiguous in the 3-dimension) [:, ::1]
     int num_threads, // number of threads to use for parallelized regions
     bool use_bond_graph, // whether or not to calculate the bond graph
-    double* frac_coords, // fractional coordinates of each node: (num_nodes, 3) TODO: LEFT OFF HERE (1.19.2025 7:48 PM) working on integrating fractional coordinates to calculate vertical wall partition dimension
+    double* frac_coords, // fractional coordinates of each node: (num_nodes, 3)
     double* lattice // lattice matrix (3x3), c-contiguous, [:, ::1]
 ) {
     #ifdef TIMING
@@ -51,6 +51,13 @@ Results* get_features(
 
     if (num_partitions <= 0) {
         printf("Why would you want less than 0 partitions?\n");
+        return NULL;
+    }
+
+    // Check if the combined cutoff radius is greater than the largest lattice vector length. Code assumes that there don't exist any self edges
+    if (are_self_edges(num_edges, src_nodes, dst_nodes)) {
+        printf("There exists a self edge in the atom graph. This means the lattice matrix is too small given the provided atom graph cutoff radius.");
+        fflush(stdout);
         return NULL;
     }
 
@@ -1512,4 +1519,16 @@ int check_partition_size(unsigned int num_partitions, PartitionRule* partition_r
         return -1;
     }
     return 0;
+}
+
+/* 
+Returns whether or not there exist self edges in the graph.
+*/
+bool are_self_edges(long num_edges, long* src_nodes, long* dst_nodes) {
+    for (long edge_i = 0; edge_i < num_edges; edge_i++) {
+        if (src_nodes[edge_i] == dst_nodes[edge_i]) {
+            return true;
+        }
+    }
+    return false;
 }

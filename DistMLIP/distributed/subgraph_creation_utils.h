@@ -95,7 +95,6 @@ typedef struct _Results {
     long** G2L_DE_mappings; // TODO: for debugging purposes, remove when done. mappings from global edge id to local edge id per partition
 } Results;
 
-//TODO: large amounts of the code can be parallelized.
 void create_partition(PartitionRule* partition, double* center_coords, long num_nodes, unsigned int num_partitions, double* frac_coords);
 void update_max_min(double* curr_val, double* max, double* min);
 void initialize_empty_partition(Partition* partition, unsigned int partition_id, long num_edges, long num_nodes, unsigned int num_partitions);
@@ -120,6 +119,7 @@ void add_BDE_to_entry(AdjListEntry* entry, BDirectedEdge* to_add);
 struct timespec get_time();
 double time_diff(struct timespec t1, struct timespec t2);
 int check_partition_size(unsigned int num_partitions, PartitionRule* partition_rule, double* lattice, double atom_cutoff, double bond_cutoff, bool use_bond_graph);
+bool are_self_edges(long num_edges, long* src_nodes, long* dst_nodes);
 
 Results* get_features(
     long num_edges,

@@ -6,9 +6,9 @@
 
 ## About
 
-DistMLIP is an easy-to-use, efficient library for running large-scale multi-GPU simulations using popular machine learning interatomic potentials (MLIPs).
+DistMLIP is an easy-to-use, efficient library for running graph-parallel, multi-GPU simulations using popular machine learning interatomic potentials (MLIPs).
 
-DistMLIP currently supports zero redundancy multi-GPU inference for MLIPs using graph parallelism. Unlike space partitioning via LAMMPS, there is no redundant calculation being performed.
+DistMLIP currently supports **zero redundancy multi-GPU inference** for MLIPs using graph parallelism. Unlike space partitioning via LAMMPS, there is no redundant calculation being performed.
 
 DistMLIP currently supports the following models:
 
@@ -27,7 +27,7 @@ TODO (going to redirect the user to benchmark folder and show a FPIS benchmark +
 
 3. Install DistMLIP from pip
 ```
-ENTER HERE
+TODO
 ```
 
 or from source:
@@ -39,21 +39,17 @@ pip install -e .
 python setup.py build_ext --inplace
 ```
 
-4. Convert your model into its DistMLIP distributed version:
-TODO
+## Running distributed inference
+DistMLIP is a wrapper library designed to inherit from other models in order to provided distributed inference support. As a result, all features of the original package (whether it's MatGL or MACE) should still work. View one of our example notebooks [here](./examples) to get started. 
+
+The standard workflow is as follows:
 
 
-5. Enable distributed mode:
-TODO
-
-6. Perform inference:
-TODO
 
 > Although it is supported via DistMLIP, it is recommended to finetune your model using the original model library before loading your model into DistMLIP via `from_existing` and running distributed inference.
 
 Currently only single node inference is supported. Multi-machine inference is future work.
 
-View one of our example notebooks [here](./examples) to get started. DistMLIP is a wrapper library designed to inherit other models. As a result, all features of the original package (whether it's MatGL or MACE) should still work.
 
 ## Roadmap
 
@@ -61,15 +57,19 @@ View one of our example notebooks [here](./examples) to get started. DistMLIP is
 - [x] Distributing TensorNet
 - [X] Distributing MACE
 - [ ] Multi-machine inference
-- [ ] LAMMPS integration
+- [ ] More works coming soon! 
 
 ## Citation
 
 If you use DistMLIP in your research, please cite our paper:
 TODO
 
+## Parallelizing a New Model
+If you would like to contribute or want us to parallelize your model, please either raise an issue or email kevinhan@cmu.edu.
+
 ## Contact Us
 
 - If you have any feature requests, please raise an issue on this repo.
-- If you would like to contribute or want us to parallelize your model, please email kevinhan@cmu.edu.
 - For collaborations and partnerships, please email kevinhan@cmu.edu.
+- All requests will receive a response within 24 hours.
+

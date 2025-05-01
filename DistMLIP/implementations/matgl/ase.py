@@ -1,5 +1,6 @@
 from matgl.ext.ase import PESCalculator
 from DistMLIP.implementations.matgl.pes import Potential_Dist
+from matgl.apps.pes import Potential
 from ase import Atoms, units
 from ase.calculators.calculator import Calculator, all_changes
 from ase.constraints import ExpCellFilter
@@ -230,7 +231,7 @@ class MolecularDynamics:
     def __init__(
         self,
         atoms: Atoms,
-        potential: Potential_Dist,
+        potential: Potential_Dist | Calculator | Potential,
         state_attr: torch.Tensor | None = None,
         stress_weight: float = 1.0,
         ensemble: Literal[
@@ -291,10 +292,15 @@ class MolecularDynamics:
             self.atoms.set_calculator(
                 PESCalculator_Dist(potential=potential, state_attr=state_attr, stress_unit="eV/A3", stress_weight=stress_weight)
             )
-        else:
+        elif isinstance(potential, Potential):
             self.atoms.set_calculator(
                 PESCalculator(potential=potential, state_attr=state_attr, stress_unit="eV/A3", stress_weight=stress_weight)
             )
+        elif isinstance(potential, Calculator):
+            self.atoms.calc = potential
+        else:
+            raise Exception(f"Input of type {potential} not supported for potential input.")
+
 
         if taut is None:
             taut = 100 * timestep * units.fs

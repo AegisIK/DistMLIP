@@ -14,18 +14,18 @@ DistMLIP currently supports the following models:
 
 - CHGNet ([MatGL](https://github.com/materialsvirtuallab/matgl))
 - TensorNet ([MatGL](https://github.com/materialsvirtuallab/matgl))
-- MACE (future work planned)
+- MACE ([MACE](https://github.com/ACEsuit/mace))
 
 **Performance Benchmark**
 TODO (going to redirect the user to benchmark folder and show a FPIS benchmark + bring up some figures from the paper)
 
 ## Getting Started
 
-1. Install PyTorch here: TODO
+1. Install PyTorch: https://pytorch.org/get-started/locally/
 
-2. Install DGL here (if using the MatGL models): TODO
+2. Install DGL here (if using the MatGL models): https://www.dgl.ai/pages/start.html
 
-3. Install DistMLIP from pip 
+3. Install DistMLIP from pip
 ```
 ENTER HERE
 ```
@@ -41,6 +41,7 @@ python setup.py build_ext --inplace
 
 4. Convert your model into its DistMLIP distributed version:
 TODO
+
 
 5. Enable distributed mode:
 TODO
@@ -58,7 +59,7 @@ View one of our example notebooks [here](./examples) to get started. DistMLIP is
 
 - [x] Distributing CHGNet
 - [x] Distributing TensorNet
-- [ ] Distributing MACE
+- [X] Distributing MACE
 - [ ] Multi-machine inference
 - [ ] LAMMPS integration
 

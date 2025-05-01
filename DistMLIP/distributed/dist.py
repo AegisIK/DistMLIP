@@ -126,6 +126,36 @@ class Distributed:
         self.total_num_edges = len(py_index_1)
         self.total_num_nodes = total_num_nodes
 
+    @staticmethod
+    def cartesian_to_wrapped_fractional(positions_cartesian, lattice, pbc):
+        """
+        Convert Cartesian coordinates to wrapped fractional coordinates.
+
+        Parameters
+        ----------
+        positions_cartesian : np.ndarray
+            Array of Cartesian positions, shape (N, 3).
+        lattice : np.ndarray
+            Lattice matrix, shape (3, 3). Rows are lattice vectors.
+
+        Returns
+        -------
+        positions_fractional : np.ndarray
+            Array of wrapped fractional positions, shape (N, 3).
+        """
+        # First get the inverse lattice
+        lattice_inv = np.linalg.inv(lattice)
+        
+        # Convert to fractional
+        positions_fractional = positions_cartesian @ lattice_inv.T
+        
+        for i, periodic in enumerate(pbc):
+            if periodic:
+                positions_fractional[:, i] %= 1.0
+                positions_fractional[:, i] %= 1.0
+        
+        return positions_fractional
+
     @classmethod
     def create_distributed(
         cls,
@@ -133,10 +163,10 @@ class Distributed:
         frac_coords: np.ndarray,
         lattice_matrix: np.ndarray,
         num_partitions: int,
-        pbc: Tuple[bool, bool, bool],
+        pbc: np.ndarray,
         cutoff: float,
-        three_body_cutoff: float,
-        tol: float,
+        three_body_cutoff: float=0,
+        tol: float=1e-8,
         use_bond_graph: bool = False,
         num_threads: int = 1,
     ) -> "Distributed":
@@ -153,7 +183,7 @@ class Distributed:
             frac_coords (np.ndarray): Fractional coordinates of all atoms (N x 3). Fractional coordinates should be wrapped.
             lattice_matrix (np.ndarray): Lattice vectors (3 x 3).
             num_partitions (int): The desired number of partitions (e.g., number of GPUs).
-            pbc (Tuple[bool, bool, bool]): Periodic boundary conditions along each lattice vector direction.
+            pbc (np.ndarray): Periodic boundary conditions along each lattice vector direction.
             cutoff (float): The cutoff radius for finding neighbors (atom graph edges).
             three_body_cutoff (float): The cutoff radius for three-body interactions (if applicable).
             tol (float): Tolerance for distance calculations.
@@ -563,6 +593,44 @@ class Distributed:
             Tensor with local edge features for the specified partition.
         """
         return global_edge_features[self.L2G_DE_mapping_list[partition]].to(device)
+
+    def distribute_node_features(
+        self,
+        global_node_features: torch.Tensor,
+        devices: List[str, torch.device]
+    ):
+        """
+        Distributes global_node_features to the specified devices.
+
+         Args:
+            global_node_features: Tensor with features for all nodes, indexed
+                globally, of shape [total number of nodes, ...]
+            devices: List of the target devices for the local tensors.
+
+        Returns:
+            Tensor with local node features for the specified partition.
+        """
+        assert len(devices) == self.num_partitions, "There must be the same number of partitions as there are devices"
+        return [self.global_to_local_nodes(global_node_features, i, devices[i]) for i in range(len(devices))]
+
+    def distribute_edge_features(
+        self,
+        global_edges_features: torch.Tensor,
+        devices: List[str, torch.device]
+    ):
+        """
+        Distributes global_edge_features to the specified devices.
+
+         Args:
+            global_edge_features: Tensor with features for all edges, indexed
+                globally, [total number of edges, ...]
+            devices: List of the target devices for the local tensors.
+
+        Returns:
+            Tensor with local edge features for the specified partition.
+        """
+        assert len(devices) == self.num_partitions, "There must be the same number of partitions as there are devices"
+        return [self.global_to_local_edges(global_edges_features, i, devices[i]) for i in range(len(devices))]
 
     def edge_to_bond(
         self,

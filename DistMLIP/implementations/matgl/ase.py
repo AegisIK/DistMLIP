@@ -98,10 +98,10 @@ class PESCalculator_Dist(PESCalculator):
         Calculator.calculate(self, atoms=atoms, properties=properties, system_changes=system_changes)
 
         # TODO: testing remove when done
-        current_count = perf_counter()
-        if self.last_count:
-            print("Step time:", current_count - self.last_count)
-        self.last_count=current_count
+        # current_count = perf_counter()
+        # if self.last_count:
+        #     print("Step time:", current_count - self.last_count)
+        # self.last_count=current_count
         
         # type: ignore
         if self.state_attr is not None:

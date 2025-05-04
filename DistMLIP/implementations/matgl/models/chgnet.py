@@ -31,7 +31,7 @@ class CHGNet_Dist(CHGNet):
         ##### Creating 1 Global tensor for positions (on self.gpus[0]) and distributing to each features for each subgraph #####
         # strain for stress calculations
         lattice_matrix = torch.tensor(
-            lattice_matrix, dtype=self.dtype, device=self.gpus[0]
+            lattice_matrix, dtype=DistMLIP.float_th, device=self.gpus[0]
         )
         strain = lattice_matrix.new_zeros([1, 3, 3], device=self.gpus[0])
 
@@ -42,14 +42,14 @@ class CHGNet_Dist(CHGNet):
             torch.eye(3, device=lattice_matrix.device) + strain
         )
         frac_coords = torch.tensor(
-            atoms.get_scaled_positions(False), dtype=self.dtype, device=self.gpus[0]
+            atoms.get_scaled_positions(False), dtype=DistMLIP.float_th, device=self.gpus[0]
         )
 
         big_graph_edge_lattice = torch.repeat_interleave(
             lattice_matrix, dist_info.total_num_edges, dim=0
         )
         big_graph_offset = torch.tensor(
-            dist_info.py_offsets, dtype=self.dtype, device=self.gpus[0]
+            dist_info.py_offsets, dtype=DistMLIP.float_th, device=self.gpus[0]
         )
 
         big_graph_offshift = (

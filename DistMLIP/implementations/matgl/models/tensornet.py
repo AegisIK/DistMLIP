@@ -19,7 +19,7 @@ class TensorNet_Dist(TensorNet):
     ):
         # strain for stress calculations
         lattice_matrix = torch.tensor(
-            lattice_matrix, dtype=self.dtype, device=self.gpus[0]
+            lattice_matrix, dtype=DistMLIP.float_th, device=self.gpus[0]
         )
         strain = lattice_matrix.new_zeros([1, 3, 3], device=self.gpus[0])
 
@@ -30,14 +30,14 @@ class TensorNet_Dist(TensorNet):
             torch.eye(3, device=lattice_matrix.device) + strain
         )
         frac_coords = torch.tensor(
-            atoms.get_scaled_positions(False), dtype=self.dtype, device=self.gpus[0]
+            atoms.get_scaled_positions(False), dtype=DistMLIP.float_th, device=self.gpus[0]
         )
 
         big_graph_edge_lattice = torch.repeat_interleave(
             lattice_matrix, dist_info.total_num_edges, dim=0
         )
         big_graph_offset = torch.tensor(
-            dist_info.py_offsets, dtype=self.dtype, device=self.gpus[0]
+            dist_info.py_offsets, dtype=DistMLIP.float_th, device=self.gpus[0]
         )
 
         big_graph_offshift = (
@@ -117,11 +117,6 @@ class TensorNet_Dist(TensorNet):
         )
 
     def dist_forward(self, atom_graphs, X_feats, dist_info):
-        # TODO: testing, remove when done
-        to_print = [f"Graph {i}: {atom_graphs[i].number_of_edges()}" for i in range(len(atom_graphs))]
-        print(", ".join(to_print))
-
-
         # Interaction layers
         for layer_i in range(len(self.layers)):
             for partition_i, gpu_index in enumerate(self.gpus):
@@ -164,12 +159,12 @@ class TensorNet_Dist(TensorNet):
         output = dgl.readout_nodes(big_graph_placeholder, "atom_features", op="sum")
 
         # TODO: testing, remove when done
-        num_gpus = 8  # You can also use torch.cuda.device_count() if dynamic
-        allocated = [torch.cuda.memory_allocated(i) / 1024**3 for i in range(num_gpus)]
-        reserved = [torch.cuda.memory_reserved(i) / 1024**3 for i in range(num_gpus)]
+        # num_gpus = 8  # You can also use torch.cuda.device_count() if dynamic
+        # allocated = [torch.cuda.memory_allocated(i) / 1024**3 for i in range(num_gpus)]
+        # reserved = [torch.cuda.memory_reserved(i) / 1024**3 for i in range(num_gpus)]
 
-        print("Allocated (GB):", ["{:.2f}".format(a) for a in allocated])
-        print("Reserved  (GB):", ["{:.2f}".format(r) for r in reserved])
+        # print("Allocated (GB):", ["{:.2f}".format(a) for a in allocated])
+        # print("Reserved  (GB):", ["{:.2f}".format(r) for r in reserved])
 
         return torch.squeeze(output)
         
@@ -190,16 +185,16 @@ class TensorNet_Dist(TensorNet):
                 self.gpus.append("cuda:" + str(gpu_index))
 
         self.bond_expansion_dist = [
-            deepcopy(self.bond_expansion).to(gpu_index).eval().to(self.dtype)
+            deepcopy(self.bond_expansion).to(gpu_index).eval().to(DistMLIP.float_th)
             for gpu_index in gpus
         ]
         self.tensor_embedding_dist = [
-            deepcopy(self.tensor_embedding).to(gpu_index).eval().to(self.dtype)
+            deepcopy(self.tensor_embedding).to(gpu_index).eval().to(DistMLIP.float_th)
             for gpu_index in gpus
         ]
         self.layers_dist = [
             [
-                deepcopy(layer).to(gpu_index).eval().to(self.dtype)
+                deepcopy(layer).to(gpu_index).eval().to(DistMLIP.float_th)
                 for layer in self.layers
             ]
             for gpu_index in gpus

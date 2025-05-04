@@ -236,8 +236,8 @@ class ScaleShiftMACE_Dist(ScaleShiftMACE):
 
     @classmethod
     def from_existing(cls, model):
-        if not isinstance(model, ScaleShiftMACE_Dist):
-            raise NotImplementedError("Only ScaleShiftMACE supports distributed mode at the moment. Contact Kevin at kevinhan@cmu.edu if you want to request a new model to be supported.")
+        if not isinstance(model, ScaleShiftMACE):
+            raise NotImplementedError(f"Only ScaleShiftMACE supports distributed mode at the moment, not {type(model)}. Contact Kevin at kevinhan@cmu.edu if you want to request a new model to be supported.")
 
         model.to("cpu")
         dist_model = cls.__new__(cls)

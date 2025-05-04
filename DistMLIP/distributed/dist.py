@@ -143,11 +143,8 @@ class Distributed:
         positions_fractional : np.ndarray
             Array of wrapped fractional positions, shape (N, 3).
         """
-        # First get the inverse lattice
-        lattice_inv = np.linalg.inv(lattice)
-        
         # Convert to fractional
-        positions_fractional = positions_cartesian @ lattice_inv.T
+        positions_fractional = np.linalg.solve(lattice.T, np.transpose(positions_cartesian)).T
         
         for i, periodic in enumerate(pbc):
             if periodic:

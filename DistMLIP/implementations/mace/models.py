@@ -177,9 +177,6 @@ class ScaleShiftMACE_Dist(ScaleShiftMACE):
         total_energy = e0 + inter_e
         node_energy = node_e0.double() + node_inter_es.double()
 
-        # TODO: hardcoded for testing, change when done
-        compute_hessian=False
-
         forces, virials, stress, hessian, edge_forces = get_outputs(
             energy=inter_e,
             positions=positions,

@@ -11,6 +11,7 @@ from e3nn.util.jit import compile_mode
 from mace.tools import torch_tools
 
 from DistMLIP.distributed.dist import Distributed
+from DistMLIP.implementations.mace.mace_utils import prepare_graph
 from copy import deepcopy
 
 from mace.modules.radial import ZBLBasis
@@ -34,7 +35,6 @@ from mace.modules.utils import (
     get_edge_vectors_and_lengths,
     get_outputs,
     get_symmetric_displacement,
-    prepare_graph,
 )
 
 
@@ -79,7 +79,7 @@ class ScaleShiftMACE_Dist(ScaleShiftMACE):
         lammps_class = interaction_kwargs.lammps_class
 
         # Atomic energies
-        node_e0 = self.atomic_energies_fn_dist(data["node_attrs"])[
+        node_e0 = self.atomic_energies_fn(data["node_attrs"])[
             num_atoms_arange, node_heads
         ]
 
@@ -87,12 +87,36 @@ class ScaleShiftMACE_Dist(ScaleShiftMACE):
             src=node_e0, index=data["batch"], dim=0, dim_size=num_graphs
         )  # [n_graphs, num_heads]
 
+        node_attrs_dist = dist_info.distribute_node_features(data["node_attrs"], self.gpus)
+        node_heads_dist = dist_info.distribute_node_features(node_heads, self.gpus)
+
+        vectors_dist = dist_info.distribute_edge_features(vectors, self.gpus)
+        lengths_dist = dist_info.distribute_edge_features(lengths, self.gpus)
+
+        src_nodes_torch = [torch.from_numpy(dist_info.src_nodes[i]) for i in range(len(self.gpus))]
+        dst_nodes_torch = [torch.from_numpy(dist_info.dst_nodes[i]) for i in range(len(self.gpus))]
+        edge_index_dist = [torch.cat((src[None, :], dst[None, :]), dim=0).to(gpu) for gpu, src, dst in zip(self.gpus, src_nodes_torch, dst_nodes_torch)]
+
+        # Embeddings distributed
+        node_feats_dist = []
+        edge_attrs_dist = []
+        edge_feats_dist = []
+        
+
         # Embeddings
-        node_feats = self.node_embedding_dist(data["node_attrs"])
-        edge_attrs = self.spherical_harmonics_dist(vectors)
-        edge_feats = self.radial_embedding_dist(
-            lengths, data["node_attrs"], data["edge_index"], self.atomic_numbers
-        )
+        for partition_i, gpu_index in enumerate(self.gpus):
+            curr_node_feats = self.node_embedding_dist[partition_i](node_attrs_dist[partition_i])
+            curr_edge_attrs = self.spherical_harmonics_dist[partition_i](vectors_dist[partition_i])
+
+            curr_edge_feats = self.radial_embedding_dist[partition_i](lengths_dist[partition_i], 
+                                                                      node_attrs_dist[partition_i], 
+                                                                      edge_index_dist[partition_i],
+                                                                      self.atomic_numbers_dist[partition_i]
+                                                                      )
+
+            node_feats_dist.append(curr_node_feats)
+            edge_attrs_dist.append(curr_edge_attrs)
+            edge_feats_dist.append(curr_edge_feats)
 
         if hasattr(self, "pair_repulsion"):
             raise NotImplementedError("pair_repulsion not yet implemented for distributed mode")
@@ -105,24 +129,10 @@ class ScaleShiftMACE_Dist(ScaleShiftMACE):
         # Interactions
         node_es_list = [pair_node_energy]
         node_feats_list: List[torch.Tensor] = []
-
-        # Send the pertinent features to each GPU
-        node_attrs_dist = dist_info.distribute_node_features(data["node_attrs"], self.gpus)
-        node_feats_dist = dist_info.distribute_node_features(node_feats, self.gpus)
-        edge_attrs_dist = dist_info.distribute_edge_features(edge_attrs, self.gpus)
-        edge_feats_dist = dist_info.distribute_edge_features(edge_feats, self.gpus)
-
-        node_heads_dist = dist_info.distribute_node_features(node_heads, self.gpus)
-
-        src_nodes_torch = [torch.from_numpy(dist_info.src_nodes[i]) for i in range(len(self.gpus))]
-        dst_nodes_torch = [torch.from_numpy(dist_info.dst_nodes[i]) for i in range(len(self.gpus))]
-        edge_index_dist = [torch.cat((src[None, :], dst[None, :]), dim=0).to(gpu) for gpu, src, dst in zip(self.gpus, src_nodes_torch, dst_nodes_torch)]
-
+        
         node_es_dist = [None] * len(self.gpus)
-        for i, (interaction, product, readout) in enumerate(
-            zip(self.interactions, self.products, self.readouts)
-        ):
 
+        for i in range(len(self.interactions)):
             for partition_i, gpu_index in enumerate(self.gpus):
                 curr_node_attrs_slice = node_attrs_dist[partition_i]
                 curr_node_feats = node_feats_dist[partition_i]
@@ -130,6 +140,11 @@ class ScaleShiftMACE_Dist(ScaleShiftMACE):
                 curr_edge_feats = edge_feats_dist[partition_i]
                 curr_edge_index = edge_index_dist[partition_i]
 
+                print(curr_node_feats.dtype)
+                print(curr_node_attrs_slice.dtype)
+                print(curr_edge_attrs.dtype)
+                print(curr_edge_feats.dtype)
+                print(curr_edge_index.dtype)
                 curr_node_feats, sc = self.interactions_dist[partition_i][i](
                     node_attrs=curr_node_attrs_slice,
                     node_feats=curr_node_feats,
@@ -166,6 +181,13 @@ class ScaleShiftMACE_Dist(ScaleShiftMACE):
 
         total_energy = e0 + inter_e
         node_energy = node_e0.double() + node_inter_es.double()
+
+        # TODO: hardcoded for testing, change when done
+        compute_force=True
+        compute_stress=False
+        compute_hessian=False
+        compute_edge_forces=False
+        compute_virials=False
 
         forces, virials, stress, hessian, edge_forces = get_outputs(
             energy=inter_e,
@@ -219,12 +241,13 @@ class ScaleShiftMACE_Dist(ScaleShiftMACE):
         # self.to("cpu")
         # self.device = torch_tools.init_device(self.gpus[0])
 
-        self.atomic_energies_fn_dist = deepcopy(self.atomic_energies_fn).to(self.gpus[0])
-        self.atomic_energies_fn = self.atomic_energies_fn_dist
+        self.atomic_energies_fn_dist = [deepcopy(self.atomic_energies_fn).to(gpu_index) for gpu_index in self.gpus]
 
-        self.node_embedding_dist = deepcopy(self.node_embedding).to(self.gpus[0])
-        self.spherical_harmonics_dist = deepcopy(self.spherical_harmonics.to(self.gpus[0]))
-        self.radial_embedding_dist = deepcopy(self.radial_embedding).to(self.gpus[0])
+        self.node_embedding_dist = [deepcopy(self.node_embedding).to(gpu_index) for gpu_index in self.gpus]
+        self.spherical_harmonics_dist = [deepcopy(self.spherical_harmonics).to(gpu_index) for gpu_index in self.gpus]
+        self.radial_embedding_dist = [deepcopy(self.radial_embedding).to(gpu_index) for gpu_index in self.gpus]
+
+        self.atomic_numbers_dist = [deepcopy(self.atomic_numbers).to(gpu_index) for gpu_index in self.gpus]
 
         self.interactions_dist = [deepcopy(self.interactions).to(gpu_index) for gpu_index in self.gpus]
         self.products_dist = [deepcopy(self.products).to(gpu_index) for gpu_index in self.gpus]

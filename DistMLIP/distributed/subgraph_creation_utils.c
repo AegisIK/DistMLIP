@@ -45,12 +45,14 @@ Results* get_features(
         struct timespec t0 = get_time();
     #endif
     if (num_partitions == 1) {
-        printf("Only 1 partition. That's not gonna work... bruh.\n");
+        printf("Only 1 partition. That's not gonna work... bruh. Crashing ungracefully.\n");
+        fflush(stdout);
         return NULL;
     }
 
     if (num_partitions <= 0) {
-        printf("Why would you want less than 0 partitions?\n");
+        printf("Why would you want less than 0 partitions? Crashing ungracefully.\n"); // TODO: move these checks to python layer
+        fflush(stdout);
         return NULL;
     }
 
@@ -1509,7 +1511,7 @@ int check_partition_size(unsigned int num_partitions, PartitionRule* partition_r
 
     double partition_width = partition_rule->walls[0] * vector_norm;
 
-    if (partition_width <= 2 * (atom_cutoff + bond_cutoff) && use_bond_graph) {
+    if ((partition_width <= 2 * (atom_cutoff + bond_cutoff)) && use_bond_graph) {
         printf("Bond graph is enabled but atom_cutoff is %f and bond_cutoff is %f. The partition width is %f which is <= 2 * (atom_cutoff + bond_cutoff) (%f).\nA wall width that is <= 2 * (atom_cutoff + bond_cutoff) will be inefficient but still yield correct results.\n", atom_cutoff, bond_cutoff, partition_width, 2 * (atom_cutoff + bond_cutoff));
         printf("You should reduce the # of partitions. If you cannot fit your system on a reduced # of partitions, then your system is probably too dense.\nContact Kevin (kevinhan@cmu.edu) if you need help with this.\n");
         return -1;

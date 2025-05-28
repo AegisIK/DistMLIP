@@ -419,7 +419,7 @@ class CHGNet_Dist(CHGNet):
         dist_info.atom_transfer(atom_features)
 
         # ---------------------------------
-        if self.readout_field == "atom_feat":
+        if self.readout_field == "atom_feat" or self.readout_field == "node_feat":
             # Perform final layer pass on all atom features
             final_atom_features = [
                 self.final_layer_dist[partition_i](atom_features[partition_i])

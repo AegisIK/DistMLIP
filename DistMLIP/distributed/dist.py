@@ -607,7 +607,7 @@ class Distributed:
         Returns:
             Tensor with local node features for the specified partition.
         """
-        assert len(devices) == self.num_partitions, "There must be the same number of partitions as there are devices"
+        assert len(devices) == self.num_partitions, f"There must be the same number of partitions ({self.num_partitions}) as there are devices ({len(devices)})"
         return [self.global_to_local_nodes(global_node_features, i, devices[i]) for i in range(len(devices))]
 
     def distribute_edge_features(
@@ -626,7 +626,7 @@ class Distributed:
         Returns:
             Tensor with local edge features for the specified partition.
         """
-        assert len(devices) == self.num_partitions, "There must be the same number of partitions as there are devices"
+        assert len(devices) == self.num_partitions, f"There must be the same number of partitions ({self.num_partitions}) as there are devices ({len(devices)})"
         return [self.global_to_local_edges(global_edges_features, i, devices[i]) for i in range(len(devices))]
 
     def edge_to_bond(

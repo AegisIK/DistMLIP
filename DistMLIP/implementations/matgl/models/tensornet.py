@@ -158,14 +158,6 @@ class TensorNet_Dist(TensorNet):
         big_graph_placeholder.ndata["atom_features"] = x
         output = dgl.readout_nodes(big_graph_placeholder, "atom_features", op="sum")
 
-        # TODO: testing, remove when done
-        # num_gpus = 8  # You can also use torch.cuda.device_count() if dynamic
-        # allocated = [torch.cuda.memory_allocated(i) / 1024**3 for i in range(num_gpus)]
-        # reserved = [torch.cuda.memory_reserved(i) / 1024**3 for i in range(num_gpus)]
-
-        # print("Allocated (GB):", ["{:.2f}".format(a) for a in allocated])
-        # print("Reserved  (GB):", ["{:.2f}".format(r) for r in reserved])
-
         return torch.squeeze(output)
         
 

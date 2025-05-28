@@ -15,16 +15,25 @@ license = { text = "Apache" }
 requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.26.3",
-    "matgl>=1.2.6",
-    "dgl>=2.1.0",
     "torch>=2.4.0",
-    "matgl @ git+https://github.com/materialsvirtuallab/matgl.git@5171392",
-    "mace-torch @ git+https://github.com/ACEsuit/mace.git@e4d0a4e35f7d41bca83374e22b4f03adf3cd98e0"
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: C",
     "Operating System :: OS Independent"
+]
+
+[project.optional-dependencies]
+matgl = [
+    "matgl @ git+https://github.com/materialsvirtuallab/matgl.git@5171392"
+]
+mace = [
+    "mace-torch @ git+https://github.com/ACEsuit/mace.git@e4d0a4e35f7d41bca83374e22b4f03adf3cd98e0"
+]
+all = [
+    "matgl @ git+https://github.com/materialsvirtuallab/matgl.git@5171392",
+    "dgl>=2.1.0",
+    "mace-torch @ git+https://github.com/ACEsuit/mace.git@e4d0a4e35f7d41bca83374e22b4f03adf3cd98e0"
 ]
 
 [tool.setuptools.packages.find]

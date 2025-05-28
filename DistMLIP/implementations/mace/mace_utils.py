@@ -4,6 +4,8 @@ import numpy as np
 
 from DistMLIP.distributed.dist import Distributed
 
+from typing import Dict, List, NamedTuple, Optional, Tuple
+from mace.modules.utils import InteractionKwargs, GraphContext, get_symmetric_displacement, get_edge_vectors_and_lengths
 import torch.utils.data
 from mace.data.utils import Configuration
 from mace.data.neighborhood import get_neighborhood
@@ -60,7 +62,7 @@ def get_neighborhood_dist(
         num_partitions = num_partitions,
         pbc = pbc,
         cutoff = cutoff,
-        num_threads = 1 # TODO: change this later to environment variable
+        num_threads = 128 # TODO: change this later to environment variable
     )
 
     # (2, num_edges)
@@ -353,3 +355,78 @@ class AtomicData_Dist(torch_geometric.data.Data):
             return atomic_data, dist_info
         else:
             return atomic_data
+
+
+@torch.jit.script
+def prepare_graph(
+    data: Dict[str, torch.Tensor],
+    compute_virials: bool = False,
+    compute_stress: bool = False,
+    compute_displacement: bool = False,
+    lammps_mliap: bool = False,
+) -> GraphContext:
+    if torch.jit.is_scripting():
+        lammps_mliap = False
+
+    node_heads = (
+        data["head"][data["batch"]]
+        if "head" in data
+        else torch.zeros_like(data["batch"])
+    )
+
+    if lammps_mliap:
+        n_real, n_total = data["natoms"][0], data["natoms"][1]
+        num_graphs = 2
+        num_atoms_arange = torch.arange(n_real, device=data["node_attrs"].device)
+        displacement = None
+        positions = torch.zeros(
+            (int(n_real), 3),
+            dtype=data["positions"].dtype,
+            device=data["positions"].device,
+        )
+        cell = torch.zeros(
+            (num_graphs, 3, 3),
+            dtype=data["positions"].dtype,
+            device=data["positions"].device,
+        )
+        vectors = data["vectors"].requires_grad_(True)
+        lengths = torch.linalg.vector_norm(vectors, dim=1, keepdim=True)
+        ikw = InteractionKwargs(data["lammps_class"], (n_real, n_total))
+    else:
+        data["positions"].requires_grad_(True)
+        positions = data["positions"]
+        cell = data["cell"]
+        num_atoms_arange = torch.arange(positions.shape[0], device=positions.device)
+        num_graphs = int(data["ptr"].numel() - 1)
+        displacement = torch.zeros(
+            (num_graphs, 3, 3), dtype=positions.dtype, device=positions.device
+        )
+        if compute_virials or compute_stress or compute_displacement:
+            p, s, displacement = get_symmetric_displacement(
+                positions=positions,
+                unit_shifts=data["unit_shifts"],
+                cell=cell,
+                edge_index=data["edge_index"],
+                num_graphs=num_graphs,
+                batch=data["batch"],
+            )
+            data["positions"], data["shifts"] = p, s
+        vectors, lengths = get_edge_vectors_and_lengths(
+            positions=data["positions"],
+            edge_index=data["edge_index"],
+            shifts=data["shifts"],
+        )
+        ikw = InteractionKwargs(None, (0, 0))
+
+    return GraphContext(
+        is_lammps=lammps_mliap,
+        num_graphs=num_graphs,
+        num_atoms_arange=num_atoms_arange,
+        displacement=displacement,
+        positions=positions,
+        vectors=vectors,
+        lengths=lengths,
+        cell=cell,
+        node_heads=node_heads,
+        interaction_kwargs=ikw,
+    )

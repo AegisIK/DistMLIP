@@ -18,7 +18,7 @@ DistMLIP currently supports the following models:
 - eSEN ([fairchem](https://github.com/facebookresearch/fairchem)) (coming soon)
 
 > 🚧 **This project is under active development**  
-> If you see a bug, please raise an issue or notify us. All messages will, at the minimum, be responded to within 12 hours.  
+> If you see a bug, please raise an issue or notify us. All messages will, at the latest, be responded to within 12 hours.  
 
 ## Getting Started
 

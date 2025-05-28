@@ -121,7 +121,7 @@ double time_diff(struct timespec t1, struct timespec t2);
 int check_partition_size(unsigned int num_partitions, PartitionRule* partition_rule, double* lattice, double atom_cutoff, double bond_cutoff, bool use_bond_graph);
 bool are_self_edges(long num_edges, long* src_nodes, long* dst_nodes);
 
-Results* get_features(
+int get_features(
     long num_edges,
     long* src_nodes,
     long* dst_nodes,
@@ -137,5 +137,6 @@ Results* get_features(
     int num_threads, // number of threads to use for parallelized regions
     bool use_bond_graph, // whether or not to calculate the bond graph
     double* frac_coords, // fractional coordinates of each node: (num_nodes, 3)
-    double* lattice // lattice matrix (3x3), c-contiguous, [:, ::1]
+    double* lattice, // lattice matrix (3x3), c-contiguous, [:, ::1]
+    Results** results_p
 );

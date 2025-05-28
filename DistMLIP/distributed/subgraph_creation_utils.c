@@ -23,7 +23,7 @@ Creates structs with necessary node features + metadata + edge information
 
 WARNING NOTE: partitions created are naive vertical slices
 */
-Results* get_features(
+int get_features(
     long num_edges,
     long* src_nodes,
     long* dst_nodes,
@@ -39,7 +39,8 @@ Results* get_features(
     int num_threads, // number of threads to use for parallelized regions
     bool use_bond_graph, // whether or not to calculate the bond graph
     double* frac_coords, // fractional coordinates of each node: (num_nodes, 3)
-    double* lattice // lattice matrix (3x3), c-contiguous, [:, ::1]
+    double* lattice, // lattice matrix (3x3), c-contiguous, [:, ::1]
+    Results** results_p
 ) {
     #ifdef TIMING
         struct timespec t0 = get_time();
@@ -47,20 +48,20 @@ Results* get_features(
     if (num_partitions == 1) {
         printf("Only 1 partition. That's not gonna work... bruh. Crashing ungracefully.\n");
         fflush(stdout);
-        return NULL;
+        return -2;
     }
 
     if (num_partitions <= 0) {
         printf("Why would you want less than 0 partitions? Crashing ungracefully.\n"); // TODO: move these checks to python layer
         fflush(stdout);
-        return NULL;
+        return -2;
     }
 
     // Check if the combined cutoff radius is greater than the largest lattice vector length. Code assumes that there don't exist any self edges
     if (are_self_edges(num_edges, src_nodes, dst_nodes)) {
         printf("There exists a self edge in the atom graph. This means the lattice matrix is too small given the provided atom graph cutoff radius.");
         fflush(stdout);
-        return NULL;
+        return -3;
     }
 
     #ifdef TIMING
@@ -79,7 +80,9 @@ Results* get_features(
     PRINTF("First wall position: %f\n", partition_rule->walls[0]);
 
     // Check if the partition width is sufficient given the # of partitions
-    int partition_size_flag = check_partition_size(num_partitions, partition_rule, lattice, atom_cutoff, bond_cutoff, use_bond_graph);
+    if(check_partition_size(num_partitions, partition_rule, lattice, atom_cutoff, bond_cutoff, use_bond_graph) < 0) {
+        return -4;
+    }
 
     // Allocate memory to store pointers to Partition structs (# of pointers = num_partitions)
     Partition** partitions = malloc(sizeof(Partition*) * num_partitions);
@@ -922,7 +925,8 @@ Results* get_features(
         printf("TIMING: c-level subgraph creation time: %f\n", elapsed);
     #endif
 
-    return results;
+    *results_p = results;
+    return 0;
 }
 
 

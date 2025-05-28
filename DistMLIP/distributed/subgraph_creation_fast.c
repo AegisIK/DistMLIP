@@ -187,13 +187,23 @@ static PyObject* get_subgraphs(PyObject *self, PyObject *args) {
         printf("TIMING: wrapped frac to wrapped cartesian timing: %f\n", elapsed);
         fflush(stdout);
     #endif
-
-    Results* results = get_features(fpis_num_edges, src_nodes, dst_nodes,
+    Results* results;
+    int result_msg = get_features(fpis_num_edges, src_nodes, dst_nodes,
                                     wrapped_cart_coords, num_nodes,
                                     num_partitions, r, distances,
                                     bond_r, num_within_bond_r_indices,
                                     within_bond_r_indices, offsets, num_threads,
-                                    use_bond_graph, frac_coords, lattice);
+                                    use_bond_graph, frac_coords, lattice, &results);
+
+    if (result_msg == -4) {
+        PyErr_SetString(PyExc_RuntimeError, "Partition walls are too close together. See above message.");
+        return NULL;
+    } else if (result_msg == -3) {
+        PyErr_SetString(PyExc_RuntimeError, "There contain self edges in atom graph, partition walls are too close.");
+    } else if (result_msg == -2) {
+        PyErr_SetString(PyExc_RuntimeError, "num_partitions must be >=2");
+    }
+    
     free(wrapped_cart_coords);
     // --------------------------------------------------------------------
     // Convert values in results to numpy arrays and python lists

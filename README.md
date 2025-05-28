@@ -15,6 +15,7 @@ DistMLIP currently supports the following models:
 - CHGNet ([MatGL](https://github.com/materialsvirtuallab/matgl))
 - TensorNet ([MatGL](https://github.com/materialsvirtuallab/matgl))
 - MACE ([MACE](https://github.com/ACEsuit/mace))
+- eSEN ([fairchem](https://github.com/facebookresearch/fairchem)) (coming soon)
 
 **Performance Benchmark**
 TODO (going to redirect the user to benchmark folder and show a FPIS benchmark + bring up some figures from the paper)
@@ -71,5 +72,5 @@ If you would like to contribute or want us to parallelize your model, please eit
 
 - If you have any feature requests, please raise an issue on this repo.
 - For collaborations and partnerships, please email kevinhan@cmu.edu.
-- All requests will receive a response within 24 hours.
+- All requests/issues/inquiries will receive a response within 6-12 hours.
 

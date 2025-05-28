@@ -8,6 +8,7 @@ from matgl.apps.pes import Potential
 from matgl.utils.io import IOMixIn
 
 from time import perf_counter
+import os
 
 
 class Potential_Dist(Potential, IOMixIn):
@@ -17,7 +18,7 @@ class Potential_Dist(Potential, IOMixIn):
 
     def __init__(
         self,
-        num_threads = 1,
+        num_threads = None,
         **kwargs
     ):
         """
@@ -63,14 +64,17 @@ class Potential_Dist(Potential, IOMixIn):
             (energies, forces, stresses, hessian) or (energies, forces, stresses, hessian, site-wise properties)
         """
         if not num_threads:
-            num_threads = self.num_threads
+            if not self.num_threads:
+                num_threads = self.num_threads
+            else:
+                num_threads = os.environ.get("DISTMLIP_NUM_THREADS", 8)
 
         ##### Creating Graph Partitions #####
         lattice_matrix = np.array(atoms.get_cell())
         cart_coords = np.array(atoms.get_positions(wrap=False))
         frac_coords = np.array(atoms.get_scaled_positions(wrap=True))
 
-        pbc = np.array([1, 1, 1], dtype=int)
+        pbc = atoms.get_pbc().astype(np.int64)
         num_partitions = len(self.model.gpus)
 
         dist_info = Distributed.create_distributed(cart_coords=cart_coords,

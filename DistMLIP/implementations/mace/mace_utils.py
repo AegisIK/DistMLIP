@@ -9,6 +9,7 @@ from mace.modules.utils import InteractionKwargs, GraphContext, get_symmetric_di
 import torch.utils.data
 from mace.data.utils import Configuration
 from mace.data.neighborhood import get_neighborhood
+import os
 
 
 from mace.tools import (
@@ -62,7 +63,7 @@ def get_neighborhood_dist(
         num_partitions = num_partitions,
         pbc = pbc,
         cutoff = cutoff,
-        num_threads = 128 # TODO: change this later to environment variable
+        num_threads = os.environ.get("DISTMLIP_NUM_THREADS", 8)
     )
 
     # (2, num_edges)

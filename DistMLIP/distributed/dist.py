@@ -143,6 +143,9 @@ class Distributed:
         positions_fractional : np.ndarray
             Array of wrapped fractional positions, shape (N, 3).
         """
+        if not pbc[0] and not pbc[1] and not pbc[2]:
+            return positions_cartesian
+
         # Convert to fractional
         positions_fractional = np.linalg.solve(lattice.T, np.transpose(positions_cartesian)).T
         

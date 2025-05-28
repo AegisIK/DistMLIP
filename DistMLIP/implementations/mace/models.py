@@ -140,11 +140,6 @@ class ScaleShiftMACE_Dist(ScaleShiftMACE):
                 curr_edge_feats = edge_feats_dist[partition_i]
                 curr_edge_index = edge_index_dist[partition_i]
 
-                print(curr_node_feats.dtype)
-                print(curr_node_attrs_slice.dtype)
-                print(curr_edge_attrs.dtype)
-                print(curr_edge_feats.dtype)
-                print(curr_edge_index.dtype)
                 curr_node_feats, sc = self.interactions_dist[partition_i][i](
                     node_attrs=curr_node_attrs_slice,
                     node_feats=curr_node_feats,

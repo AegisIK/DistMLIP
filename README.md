@@ -17,8 +17,8 @@ DistMLIP currently supports the following models:
 - MACE ([MACE](https://github.com/ACEsuit/mace))
 - eSEN ([fairchem](https://github.com/facebookresearch/fairchem)) (coming soon)
 
-**Performance Benchmark**
-TODO (going to redirect the user to benchmark folder and show a FPIS benchmark + bring up some figures from the paper)
+> 🚧 **This project is under active development**  
+> If you see a bug, please raise an issue or notify us. All messages will, at the minimum, be responded to within 12 hours.  
 
 ## Getting Started
 
@@ -36,14 +36,12 @@ or from source:
 ```bash
 git clone git@github.com:AegisIK/DistMLIP.git
 cd DistMLIP
-pip install -e .
+pip install -e .[all]
 python setup.py build_ext --inplace
 ```
 
 ## Running distributed inference
-DistMLIP is a wrapper library designed to inherit from other models in order to provided distributed inference support. As a result, all features of the original package (whether it's MatGL or MACE) should still work. View one of our example notebooks [here](./examples) to get started. 
-
-The standard workflow is as follows:
+DistMLIP is a wrapper library designed to inherit from other models in order to provided distributed inference support. As a result, all features of the original package (whether it's MatGL or MACE) will still work. View one of our example notebooks [here](./examples) to get started. 
 
 
 
@@ -69,7 +67,7 @@ TODO
 If you would like to contribute or want us to parallelize your model, please either raise an issue or email kevinhan@cmu.edu.
 
 ## Contact Us
-
+- If you have any questions, feel free to raise an issue on this repo.
 - If you have any feature requests, please raise an issue on this repo.
 - For collaborations and partnerships, please email kevinhan@cmu.edu.
 - All requests/issues/inquiries will receive a response within 6-12 hours.

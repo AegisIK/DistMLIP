@@ -63,7 +63,7 @@ def get_neighborhood_dist(
         num_partitions = num_partitions,
         pbc = pbc,
         cutoff = cutoff,
-        num_threads = os.environ.get("DISTMLIP_NUM_THREADS", 8)
+        num_threads = int(os.environ.get("DISTMLIP_NUM_THREADS", 8))
     )
 
     # (2, num_edges)

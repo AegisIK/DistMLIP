@@ -67,7 +67,7 @@ class Potential_Dist(Potential, IOMixIn):
             if not self.num_threads:
                 num_threads = self.num_threads
             else:
-                num_threads = os.environ.get("DISTMLIP_NUM_THREADS", 8)
+                num_threads = int(os.environ.get("DISTMLIP_NUM_THREADS", 8))
 
         ##### Creating Graph Partitions #####
         lattice_matrix = np.array(atoms.get_cell())

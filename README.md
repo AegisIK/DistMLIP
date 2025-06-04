@@ -61,7 +61,15 @@ Currently only single node inference is supported. Multi-machine inference is fu
 ## Citation
 
 If you use DistMLIP in your research, please cite our paper:
-TODO
+<pre>@misc{han2025distmlipdistributedinferenceplatform,
+      title={DistMLIP: A Distributed Inference Platform for Machine Learning Interatomic Potentials}, 
+      author={Kevin Han and Bowen Deng and Amir Barati Farimani and Gerbrand Ceder},
+      year={2025},
+      eprint={2506.02023},
+      archivePrefix={arXiv},
+      primaryClass={cs.DC},
+      url={https://arxiv.org/abs/2506.02023}, 
+}</pre>
 
 ## Parallelizing a New Model
 If you would like to contribute or want us to parallelize your model, please either raise an issue or email kevinhan@cmu.edu.

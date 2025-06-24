@@ -119,10 +119,11 @@ class ScaleShiftMACE_Dist(ScaleShiftMACE):
             edge_feats_dist.append(curr_edge_feats)
 
         if hasattr(self, "pair_repulsion"):
-            raise NotImplementedError("pair_repulsion not yet implemented for distributed mode")
-            pair_node_energy = self.pair_repulsion_fn(
-                lengths, data["node_attrs"], data["edge_index"], self.atomic_numbers
-            )
+            pair_node_energy_dist = []
+            for partition_i, gpu_index in enumerate(self.gpus):
+                pair_node_energy_dist.append(self.pair_repulsion_fn_dist[partition_i](lengths_dist[partition_i], node_attrs_dist[partition_i], edge_index_dist[partition_i], self.atomic_numbers_dist[partition_i]))
+
+            pair_node_energy = dist_info.aggregate(pair_node_energy_dist, self.gpus[0])
         else:
             pair_node_energy = torch.zeros_like(node_e0)
 
@@ -242,6 +243,9 @@ class ScaleShiftMACE_Dist(ScaleShiftMACE):
         self.readouts_dist = [deepcopy(self.readouts).to(gpu_index) for gpu_index in self.gpus]
 
         self.scale_shift_dist = deepcopy(self.scale_shift).to(self.gpus[0])
+
+        if hasattr(self, "pair_repulsion"):
+            self.pair_repulsion_fn_dist = [deepcopy(self.pair_repulsion_fn).to(gpu_index) for gpu_index in self.gpus]
 
         self.dist_enabled = True
 

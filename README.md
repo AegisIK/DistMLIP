@@ -36,9 +36,11 @@ or from source:
 ```bash
 git clone git@github.com:AegisIK/DistMLIP.git
 cd DistMLIP
-pip install -e .[all]
+pip install -e .[matgl] # If you're using the dgl models
+pip install -e .[mace] # If you're using the mace models
 python setup.py build_ext --inplace
 ```
+> Note: due to pytorch dependency issues with dgl/matgl, try to only install the dependencies for each set of models separately
 
 ## Running distributed inference
 DistMLIP is a wrapper library designed to inherit from other models in order to provided distributed inference support. As a result, all features of the original package (whether it's MatGL or MACE) will still work. View one of our example notebooks [here](./examples) to get started. 

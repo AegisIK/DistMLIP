@@ -24,10 +24,11 @@ classifiers = [
 
 [project.optional-dependencies]
 matgl = [
-    "matgl @ git+https://github.com/materialsvirtuallab/matgl.git@5171392"
+    "matgl @ git+https://github.com/materialsvirtuallab/matgl.git@5171392",
 ]
 mace = [
     "mace-torch @ git+https://github.com/ACEsuit/mace.git@e4d0a4e35f7d41bca83374e22b4f03adf3cd98e0",
+    "pymatgen"
 ]
 
 [tool.setuptools.packages.find]

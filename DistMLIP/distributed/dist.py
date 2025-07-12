@@ -4,7 +4,6 @@ import numpy as np
 from DistMLIP.distributed.subgraph_creation_fast import get_subgraphs_fast
 import torch
 from typing import List, Tuple, Optional, Union
-from time import perf_counter
 
 class Distributed:
     "Distributed Graph for parallelized MLIP inference"
@@ -194,7 +193,6 @@ class Distributed:
             Distributed: A new instance of the Distributed class containing the partitioned graph data.
         """
 
-        t1 = perf_counter()
         cart_coords = np.ascontiguousarray(cart_coords, dtype=float)
         frac_coords = np.ascontiguousarray(frac_coords, dtype=float)
         lattice_matrix = np.ascontiguousarray(lattice_matrix, dtype=float)
@@ -232,8 +230,6 @@ class Distributed:
             use_bond_graph,
             frac_coords,
         )
-        t2 = perf_counter()
-        print("get_subgraphs_fast time:", t2 - t1, flush=True)
 
         # Set up markers arrays
         markers_tmp = []

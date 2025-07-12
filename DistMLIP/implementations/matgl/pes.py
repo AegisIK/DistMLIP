@@ -83,7 +83,6 @@ class Potential_Dist(Potential, IOMixIn):
                                                     num_threads=num_threads
                                                 )
         
-        assert False
         model_out = self.model.potential_forward_dist(
             dist_info,
             atoms,

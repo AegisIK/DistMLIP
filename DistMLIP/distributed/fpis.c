@@ -516,9 +516,9 @@ void intra_parallel_find_points_in_spheres_c(
     long max_count = 0;
 
     #ifdef TIMING
-        struct timespec t1, t2, t3, t4, t5, t6;
+        double t1, t2, t3, t4, t5, t6;
         double elapsed;
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t1);
+        t1 = omp_get_wtime();
     #endif
 
     // First loop to calculate memory usage
@@ -547,8 +547,8 @@ void intra_parallel_find_points_in_spheres_c(
     }
 
     #ifdef TIMING
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t2);
-        elapsed = (t2.tv_sec - t1.tv_sec) + (t2.tv_nsec - t1.tv_nsec) / 1e9;
+        t2 = omp_get_wtime();
+        elapsed = t2 - t1;
         printf("First loop elapsed: %.9f seconds\n", elapsed);
     #endif
 
@@ -587,7 +587,6 @@ void intra_parallel_find_points_in_spheres_c(
                         expanded_coords_p[3*idx] = coord_temp[0];
                         expanded_coords_p[3*idx+1] = coord_temp[1];
                         expanded_coords_p[3*idx+2] = coord_temp[2];
-                        // count += 1;
                     }
                 }
             }
@@ -595,8 +594,8 @@ void intra_parallel_find_points_in_spheres_c(
     }
 
     #ifdef TIMING
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t3);
-        elapsed = (t3.tv_sec - t2.tv_sec) + (t3.tv_nsec - t2.tv_nsec) / 1e9;
+        t3 = omp_get_wtime();
+        elapsed = t3 - t2;
         printf("Second loop elapsed: %.9f seconds\n", elapsed);
     #endif
 
@@ -662,7 +661,7 @@ void intra_parallel_find_points_in_spheres_c(
     max_count = 0;
 
     #ifdef TIMING
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t4);
+        t4 = omp_get_wtime();
     #endif
 
     // Third loop -- allocate ranges for each thread
@@ -736,8 +735,8 @@ void intra_parallel_find_points_in_spheres_c(
     }
 
     #ifdef TIMING
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t5);
-        elapsed = (t5.tv_sec - t4.tv_sec) + (t5.tv_nsec - t4.tv_nsec) / 1e9;
+        t5 = omp_get_wtime();
+        elapsed = t5 - t4;
         printf("Third loop elapsed: %.9f seconds\n", elapsed);
     #endif
 
@@ -794,8 +793,8 @@ void intra_parallel_find_points_in_spheres_c(
     }
 
     #ifdef TIMING
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t6);
-        elapsed = (t6.tv_sec - t5.tv_sec) + (t6.tv_nsec - t5.tv_nsec) / 1e9;
+        t6 = omp_get_wtime();
+        elapsed = t6 - t5;
         printf("Fourth loop elapsed: %.9f seconds\n", elapsed);
     #endif
 

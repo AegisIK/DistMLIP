@@ -18,7 +18,7 @@ class Potential_Dist(Potential, IOMixIn):
 
     def __init__(
         self,
-        num_threads = None,
+        num_threads=None,
         **kwargs
     ):
         """
@@ -51,7 +51,7 @@ class Potential_Dist(Potential, IOMixIn):
         self,
         atoms: Atoms,
         state_attr: torch.Tensor | None = None,
-        tol = 1.0e-8,
+        tol = 1.0e-8
     ) -> tuple[torch.Tensor, ...]:
         """Args:
             g: DGL graph
@@ -62,6 +62,7 @@ class Potential_Dist(Potential, IOMixIn):
         Returns:
             (energies, forces, stresses, hessian) or (energies, forces, stresses, hessian, site-wise properties)
         """
+        # Priority goes (num_threads in parameter to forward function, num_threads set in Potential_Dist object, num_threads set in DISTMLIP_NUM_THREADS environment variable)
         num_threads = self.num_threads if self.num_threads else int(os.environ.get("DISTMLIP_NUM_THREADS", 8))
 
         ##### Creating Graph Partitions #####

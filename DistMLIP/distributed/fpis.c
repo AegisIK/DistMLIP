@@ -49,8 +49,8 @@ double inner(const double *x, const double *y);
 void cross(const double *x, const double *y, double *out);
 double vec_norm(const double *vec, int size);
 void max_and_min(const double *coords, int coords_rows, int coords_cols, double max_coords[3], double min_coords[3]);
-void compute_cube_index(const double *coords, int coords_rows, const double global_min[3], double radius, long *return_indices);
-void three_to_one(const long *label3d, int n, long ny, long nz, long *label1d);
+void compute_cube_index(const double *coords, int coords_rows, const double global_min[3], double radius, long *return_indices, int number_of_threads);
+void three_to_one(const long *label3d, int n, long ny, long nz, long *label1d, int number_of_threads);
 int distance_vertices(const double center[8][3], const double off[8][3], double r);
 void offset_cube(const double center[8][3], long n, long m, long l, double offsetted[8][3]);
 
@@ -84,7 +84,7 @@ void get_cube_neighbors(long ncube[3], long **neighbor_map, long nb_cubes) {
     }
 
     // Convert 3D indices to 1D
-    three_to_one(cube_indices_3d, nb_cubes, ncube[1], ncube[2], cube_indices_1d);
+    three_to_one(cube_indices_3d, nb_cubes, ncube[1], ncube[2], cube_indices_1d, 1);
 
     for (i = 0; i < nb_cubes; i++) {
         for (j = 0; j < n_ovectors; j++) {
@@ -344,9 +344,11 @@ void compute_cube_index(
     int coords_rows,
     const double global_min[3],
     double radius,
-    long *return_indices
+    long *return_indices,
+    int number_of_threads
 ) {
     int i, j;
+    #pragma omp parallel for num_threads(number_of_threads) private(i, j) collapse(2)
     for (i = 0; i < coords_rows; i++) {
         for (j = 0; j < 3; j++) {
             return_indices[i * 3 + j] = (long)(
@@ -362,9 +364,11 @@ void three_to_one(
     int n,
     long ny,
     long nz,
-    long *label1d
+    long *label1d,
+    int number_of_threads
 ) {
     int i;
+    #pragma omp parallel for num_threads(number_of_threads) private(i)
     for (i = 0; i < n; i++) {
         label1d[i] = label3d[i * 3 + 0] * ny * nz + label3d[i * 3 + 1] * nz + label3d[i * 3 + 2];
     }
@@ -513,94 +517,110 @@ void intra_parallel_find_points_in_spheres_c(
     }
     matmul(all_fcoords, n_total, 3, lattice, 3, 3, coords_in_cell);
 
-    long max_count = 0;
-
     #ifdef TIMING
-        struct timespec t1, t2, t3, t4, t5, t6;
+        double t1, t2, t3, t4, t5, t6;
         double elapsed;
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t1);
+        t1 = omp_get_wtime();
     #endif
 
-    // First loop to calculate memory usage
-    #pragma omp parallel for reduction(+:max_count) private(i, j, k, l, m, coord_temp) num_threads(number_of_threads)
-    for (i = min_bounds[0]; i < max_bounds[0]; i++) {
-        for (j = min_bounds[1]; j < max_bounds[1]; j++) {
-            for (k = min_bounds[2]; k < max_bounds[2]; k++) {
-                for (l = 0; l < n_total; l++) {
-                    for (m = 0; m < 3; m++) {
-                        coord_temp[m] = (double)i * lattice[m] +
-                                        (double)j * lattice[3 + m] +
-                                        (double)k * lattice[6 + m] +
-                                        coords_in_cell[3*l + m];
-                    }
-                    if ((coord_temp[0] > valid_min[0]) &&
-                        (coord_temp[0] < valid_max[0]) &&
-                        (coord_temp[1] > valid_min[1]) &&
-                        (coord_temp[1] < valid_max[1]) &&
-                        (coord_temp[2] > valid_min[2]) &&
-                        (coord_temp[2] < valid_max[2])) {
-                        max_count += 1;
+    // First loop to calculate total memory usage and prefix sums for second loops
+    long* per_thread_elems = calloc(number_of_threads, sizeof(long));
+
+    #pragma omp parallel num_threads(number_of_threads) private(i, j, k, l, m, coord_temp)
+    {
+        int thread_id = omp_get_thread_num();
+        #pragma omp for collapse(4)
+        for (i = min_bounds[0]; i < max_bounds[0]; i++) {
+            for (j = min_bounds[1]; j < max_bounds[1]; j++) {
+                for (k = min_bounds[2]; k < max_bounds[2]; k++) {
+                    for (l = 0; l < n_total; l++) {
+                        for (m = 0; m < 3; m++) {
+                            coord_temp[m] = (double)i * lattice[m] +
+                                            (double)j * lattice[3 + m] +
+                                            (double)k * lattice[6 + m] +
+                                            coords_in_cell[3*l + m];
+                        }
+                        if ((coord_temp[0] > valid_min[0]) &&
+                            (coord_temp[0] < valid_max[0]) &&
+                            (coord_temp[1] > valid_min[1]) &&
+                            (coord_temp[1] < valid_max[1]) &&
+                            (coord_temp[2] > valid_min[2]) &&
+                            (coord_temp[2] < valid_max[2])) {
+                            per_thread_elems[thread_id] += 1;
+                        }
                     }
                 }
             }
         }
     }
 
-    #ifdef TIMING
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t2);
-        elapsed = (t2.tv_sec - t1.tv_sec) + (t2.tv_nsec - t1.tv_nsec) / 1e9;
-        printf("First loop elapsed: %.9f seconds\n", elapsed);
-    #endif
+    // Calculate per_thread_start_points and allocate memory for second loop
+    long* per_thread_starts = malloc(sizeof(long) * number_of_threads);
+    long max_count = 0;
+    for (int thread_i = 0; thread_i < number_of_threads; thread_i++) {
+        per_thread_starts[thread_i] = max_count;
+        max_count += per_thread_elems[thread_i];
+    }
 
     double *offsets_p = (double *)safe_malloc(max_count * 3 * sizeof(double));
     double *expanded_coords_p = (double *)safe_malloc(max_count * 3 * sizeof(double));
     long *indices_p = (long *)safe_malloc(max_count * sizeof(long));
 
-    // Get translated images, coordinates and indices
-    count = 0;
-    #pragma omp parallel for private(i, j, k, l, m, coord_temp) collapse(4) num_threads(number_of_threads)
-    for (i = min_bounds[0]; i < max_bounds[0]; i++) {
-        for (j = min_bounds[1]; j < max_bounds[1]; j++) {
-            for (k = min_bounds[2]; k < max_bounds[2]; k++) {
-                for (l = 0; l < n_total; l++) {
-                    for (m = 0; m < 3; m++) {
-                        coord_temp[m] = (double)i * lattice[m] +
-                                        (double)j * lattice[3 + m] +
-                                        (double)k * lattice[6 + m] +
-                                        coords_in_cell[3*l + m];
-                    }
-                    if ((coord_temp[0] > valid_min[0]) &&
-                        (coord_temp[0] < valid_max[0]) &&
-                        (coord_temp[1] > valid_min[1]) &&
-                        (coord_temp[1] < valid_max[1]) &&
-                        (coord_temp[2] > valid_min[2]) &&
-                        (coord_temp[2] < valid_max[2])) {
+    #ifdef TIMING
+        t2 = omp_get_wtime();
+        elapsed = t2 - t1;
+        printf("First loop elapsed: %.9f seconds\n", elapsed);
+    #endif
 
-                        int idx = 0;
-                        #pragma omp atomic capture
-                        idx = count++;
+    // Second loop to get translated images, coordinates and indices
+    #pragma omp parallel num_threads(number_of_threads) private(i, j, k, l, m, coord_temp)
+    {
+        int thread_id = omp_get_thread_num();
+        long idx = per_thread_starts[thread_id];
 
-                        offsets_p[3*idx] = i;
-                        offsets_p[3*idx+1] = j;
-                        offsets_p[3*idx+2] = k;
-                        indices_p[idx] = l;
-                        expanded_coords_p[3*idx] = coord_temp[0];
-                        expanded_coords_p[3*idx+1] = coord_temp[1];
-                        expanded_coords_p[3*idx+2] = coord_temp[2];
-                        // count += 1;
+        #pragma omp for collapse(4)
+        for (i = min_bounds[0]; i < max_bounds[0]; i++) {
+            for (j = min_bounds[1]; j < max_bounds[1]; j++) {
+                for (k = min_bounds[2]; k < max_bounds[2]; k++) {
+                    for (l = 0; l < n_total; l++) {
+                        for (m = 0; m < 3; m++) {
+                            coord_temp[m] = (double)i * lattice[m] +
+                                            (double)j * lattice[3 + m] +
+                                            (double)k * lattice[6 + m] +
+                                            coords_in_cell[3*l + m];
+                        }
+                        if ((coord_temp[0] > valid_min[0]) &&
+                            (coord_temp[0] < valid_max[0]) &&
+                            (coord_temp[1] > valid_min[1]) &&
+                            (coord_temp[1] < valid_max[1]) &&
+                            (coord_temp[2] > valid_min[2]) &&
+                            (coord_temp[2] < valid_max[2])) {
+
+                            offsets_p[3*idx] = i;
+                            offsets_p[3*idx+1] = j;
+                            offsets_p[3*idx+2] = k;
+                            indices_p[idx] = l;
+                            expanded_coords_p[3*idx] = coord_temp[0];
+                            expanded_coords_p[3*idx+1] = coord_temp[1];
+                            expanded_coords_p[3*idx+2] = coord_temp[2];
+                            idx += 1;
+                        }
                     }
                 }
             }
         }
     }
+    
+    free(per_thread_elems);
+    free(per_thread_starts);
 
     #ifdef TIMING
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t3);
-        elapsed = (t3.tv_sec - t2.tv_sec) + (t3.tv_nsec - t2.tv_nsec) / 1e9;
+        t3 = omp_get_wtime();
+        elapsed = t3 - t2;
         printf("Second loop elapsed: %.9f seconds\n", elapsed);
     #endif
 
-    if (count == 0) {
+    if (max_count == 0) {
         free(frac_coords);
         free(all_fcoords);
         free(coords_in_cell);
@@ -615,7 +635,7 @@ void intra_parallel_find_points_in_spheres_c(
         exit(EXIT_FAILURE);
     }
 
-    natoms = count;
+    natoms = max_count;
 
     // Construct linked cell list
     long *all_indices3 = (long *)safe_malloc(natoms * 3 * sizeof(long));
@@ -630,10 +650,23 @@ void intra_parallel_find_points_in_spheres_c(
     double *expanded_coords = expanded_coords_p;
     long *indices = indices_p;
 
+    #ifdef TIMING
+        double temp = omp_get_wtime();
+    #endif
     // Compute cube indices
-    compute_cube_index(expanded_coords, natoms, valid_min, ledge, all_indices3);
+    compute_cube_index(expanded_coords, natoms, valid_min, ledge, all_indices3, number_of_threads);
 
-    three_to_one(all_indices3, natoms, ncube[1], ncube[2], all_indices1);
+    #ifdef TIMING
+        double temp2 = omp_get_wtime();
+        printf("timing 1: %.9f\n", temp2 - temp);
+    #endif
+
+    three_to_one(all_indices3, natoms, ncube[1], ncube[2], all_indices1, number_of_threads);
+
+    #ifdef TIMING
+        double temp3 = omp_get_wtime();
+        printf("timing 2: %.9f\n", temp3 - temp2);
+    #endif
 
     long nb_cubes = ncube[0] * ncube[1] * ncube[2];
     long *head = (long *)safe_malloc(nb_cubes * sizeof(long));
@@ -642,27 +675,56 @@ void intra_parallel_find_points_in_spheres_c(
     memset(atom_indices, -1, natoms * sizeof(long));
 
     long **neighbor_map = (long **)safe_malloc(nb_cubes * sizeof(long *));
-    for (i = 0; i < nb_cubes; i++) {
-        neighbor_map[i] = (long *)safe_malloc(27 * sizeof(long));
-        for (j = 0; j < 27; j++) {
-            neighbor_map[i][j] = -1;
-        }
+
+    // Single contiguous allocation for all neighbor data
+    long *big_array = (long *)safe_malloc(nb_cubes * 27 * sizeof(long));
+
+    // Parallel initialization of all elements to -1
+    #pragma omp parallel for num_threads(number_of_threads)
+    for (long idx = 0; idx < nb_cubes * 27; idx++) {
+        big_array[idx] = -1;
     }
 
+    // Assign row pointers sequentially
+    for (long i = 0; i < nb_cubes; i++) {
+        neighbor_map[i] = &big_array[i * 27];
+    }
+
+    #ifdef TIMING
+        double temp4 = omp_get_wtime();
+        printf("timing 3: %.9f\n", temp4 - temp3);
+    #endif
     get_cube_neighbors(ncube, neighbor_map, nb_cubes);
     for (i = 0; i < natoms; i++) {
         atom_indices[i] = head[all_indices1[i]];
         head[all_indices1[i]] = i;
     }
 
+    #ifdef TIMING
+        double temp5 = omp_get_wtime();
+        printf("timing 4: %.9f\n", temp5 - temp4);
+    #endif
+    
+
     // Get center atoms' cube indices
-    compute_cube_index(center_coords, n_center, valid_min, ledge, center_indices3);
-    three_to_one(center_indices3, n_center, ncube[1], ncube[2], center_indices1);
+    compute_cube_index(center_coords, n_center, valid_min, ledge, center_indices3, 1);
+    #ifdef TIMING
+        double temp6 = omp_get_wtime();
+        printf("timing 5: %.9f\n", temp6 - temp5);
+    #endif
+
+    three_to_one(center_indices3, n_center, ncube[1], ncube[2], center_indices1, 1);
+    #ifdef TIMING
+        double temp7 = omp_get_wtime();
+        printf("timing 6: %.9f\n", temp7 - temp6);
+    #endif
 
     max_count = 0;
 
     #ifdef TIMING
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t4);
+        t4 = omp_get_wtime();
+        elapsed = t4 - t3;
+        printf("Stuff between 2nd and 3rd loop: %.9f\n", elapsed);
     #endif
 
     // Third loop -- allocate ranges for each thread
@@ -736,8 +798,8 @@ void intra_parallel_find_points_in_spheres_c(
     }
 
     #ifdef TIMING
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t5);
-        elapsed = (t5.tv_sec - t4.tv_sec) + (t5.tv_nsec - t4.tv_nsec) / 1e9;
+        t5 = omp_get_wtime();
+        elapsed = t5 - t4;
         printf("Third loop elapsed: %.9f seconds\n", elapsed);
     #endif
 
@@ -794,8 +856,8 @@ void intra_parallel_find_points_in_spheres_c(
     }
 
     #ifdef TIMING
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t6);
-        elapsed = (t6.tv_sec - t5.tv_sec) + (t6.tv_nsec - t5.tv_nsec) / 1e9;
+        t6 = omp_get_wtime();
+        elapsed = t6 - t5;
         printf("Fourth loop elapsed: %.9f seconds\n", elapsed);
     #endif
 
@@ -829,9 +891,7 @@ void intra_parallel_find_points_in_spheres_c(
     free(center_indices1);
     free(center_indices3);
 
-    for (i = 0; i < nb_cubes; i++) {
-        free(neighbor_map[i]);
-    }
+    free(big_array);
     free(neighbor_map);
 
     free(all_indices3);

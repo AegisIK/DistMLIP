@@ -160,7 +160,7 @@ static PyObject* get_subgraphs(PyObject *self, PyObject *args) {
 
     #ifdef TIMING
         double elapsed;
-        struct timespec t0, t1, t2;
+        struct timespec t0, t1, t2, t3, t4;
         t0 = get_time();
     #endif
     intra_parallel_find_points_in_spheres_c(all_coords, num_nodes,
@@ -194,6 +194,13 @@ static PyObject* get_subgraphs(PyObject *self, PyObject *args) {
                                     bond_r, num_within_bond_r_indices,
                                     within_bond_r_indices, offsets, num_threads,
                                     use_bond_graph, frac_coords, lattice, &results);
+
+    #ifdef TIMING
+        t3 = get_time();
+        elapsed = time_diff(t2, t3);
+        printf("TIMING: get_features time: %f\n", elapsed);
+        fflush(stdout);
+    #endif
 
     if (result_msg == -4) {
         PyErr_SetString(PyExc_RuntimeError, "Partition walls are too close together. See above message.");
@@ -413,6 +420,14 @@ static PyObject* get_subgraphs(PyObject *self, PyObject *args) {
     PyTuple_SET_ITEM(ret, 16, L2G_mapping_pylist);
     PyTuple_SET_ITEM(ret, 17, G2L_mapping_pylist);
     PyTuple_SET_ITEM(ret, 18, local_center_atom_indices_pylist);
+
+    #ifdef TIMING
+        t4 = get_time();
+        elapsed = time_diff(t3, t4);
+        printf("TIMING: setting and freeing in subgraph_creation_fast: %f\n", elapsed);
+        fflush(stdout);
+    #endif
+
     return ret;
 
 

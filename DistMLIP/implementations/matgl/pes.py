@@ -18,7 +18,7 @@ class Potential_Dist(Potential, IOMixIn):
 
     def __init__(
         self,
-        num_threads = None,
+        num_threads=None,
         **kwargs
     ):
         """
@@ -51,8 +51,7 @@ class Potential_Dist(Potential, IOMixIn):
         self,
         atoms: Atoms,
         state_attr: torch.Tensor | None = None,
-        tol = 1.0e-8,
-        num_threads = None,
+        tol = 1.0e-8
     ) -> tuple[torch.Tensor, ...]:
         """Args:
             g: DGL graph
@@ -63,11 +62,8 @@ class Potential_Dist(Potential, IOMixIn):
         Returns:
             (energies, forces, stresses, hessian) or (energies, forces, stresses, hessian, site-wise properties)
         """
-        if not num_threads:
-            if not self.num_threads:
-                num_threads = self.num_threads
-            else:
-                num_threads = int(os.environ.get("DISTMLIP_NUM_THREADS", 8))
+        # Priority goes (num_threads in parameter to forward function, num_threads set in Potential_Dist object, num_threads set in DISTMLIP_NUM_THREADS environment variable)
+        num_threads = self.num_threads if self.num_threads else int(os.environ.get("DISTMLIP_NUM_THREADS", 8))
 
         ##### Creating Graph Partitions #####
         lattice_matrix = np.array(atoms.get_cell())
@@ -76,7 +72,6 @@ class Potential_Dist(Potential, IOMixIn):
 
         pbc = atoms.get_pbc().astype(np.int64)
         num_partitions = len(self.model.gpus)
-
         dist_info = Distributed.create_distributed(cart_coords=cart_coords,
                                                     frac_coords=frac_coords,
                                                     lattice_matrix=lattice_matrix,
@@ -89,7 +84,6 @@ class Potential_Dist(Potential, IOMixIn):
                                                     num_threads=num_threads
                                                 )
         
-
         model_out = self.model.potential_forward_dist(
             dist_info,
             atoms,

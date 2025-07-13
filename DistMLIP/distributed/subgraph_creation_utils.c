@@ -71,6 +71,7 @@ int get_features(
     #endif
 
     omp_set_num_threads(num_threads);
+    PRINTF("Number of threads: %d\n", num_threads);
 
     // Get the partition rule
     PartitionRule* partition_rule = malloc(sizeof(PartitionRule));

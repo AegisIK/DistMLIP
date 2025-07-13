@@ -5,7 +5,6 @@ from DistMLIP.distributed.subgraph_creation_fast import get_subgraphs_fast
 import torch
 from typing import List, Tuple, Optional, Union
 
-
 class Distributed:
     "Distributed Graph for parallelized MLIP inference"
 
@@ -193,6 +192,7 @@ class Distributed:
         Returns:
             Distributed: A new instance of the Distributed class containing the partitioned graph data.
         """
+
         cart_coords = np.ascontiguousarray(cart_coords, dtype=float)
         frac_coords = np.ascontiguousarray(frac_coords, dtype=float)
         lattice_matrix = np.ascontiguousarray(lattice_matrix, dtype=float)

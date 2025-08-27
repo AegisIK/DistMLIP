@@ -30,6 +30,9 @@ mace = [
     "mace-torch @ git+https://github.com/ACEsuit/mace.git@e4d0a4e35f7d41bca83374e22b4f03adf3cd98e0",
     "pymatgen"
 ]
+fairchem = [
+    "fairchem-core @ git+https://github.com/facebookresearch/fairchem.git@26c55cb75d9e9d07b6d973dda0b4f119ddf62860#subdirectory=packages/fairchem-core"
+]
 
 [tool.setuptools.packages.find]
 where = ["."]

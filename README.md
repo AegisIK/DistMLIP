@@ -15,7 +15,7 @@ DistMLIP currently supports the following models:
 - CHGNet ([MatGL](https://github.com/materialsvirtuallab/matgl))
 - TensorNet ([MatGL](https://github.com/materialsvirtuallab/matgl))
 - MACE ([MACE](https://github.com/ACEsuit/mace))
-- eSEN ([fairchem](https://github.com/facebookresearch/fairchem)) (coming soon)
+- UMA ([fairchem](https://github.com/facebookresearch/fairchem))
 
 > 🚧 **This project is under active development**  
 > If you see a bug, please raise an issue or notify us. All messages will, at the latest, be responded to within 12 hours.  
@@ -36,13 +36,17 @@ or from source:
 ```bash
 git clone git@github.com:AegisIK/DistMLIP.git
 cd DistMLIP
-pip install -e .[matgl] # If you're using the dgl models
-pip install -e .[mace] # If you're using the mace models
+
+# Only run one of the following installation commands 
+pip install -e .[matgl] # If you're using CHGNet or TensorNet
+pip install -e .[mace] # If you're using MACE
+pip install -e .[fairchem] # If you're using UMA
+
 python setup.py build_ext --inplace
 ```
 
 ## Running distributed inference
-DistMLIP is a wrapper library designed to inherit from other models in order to provided distributed inference support. As a result, all features of the original package (whether it's MatGL or MACE) will still work. View one of our example notebooks [here](./examples) to get started. 
+DistMLIP is a wrapper library designed to inherit from other models in order to provided distributed inference support. As a result, all features of the original package (whether it's MatGL, MACE, or UMA) will still work. View one of our example notebooks [here](./examples) to get started. 
 
 
 
@@ -56,6 +60,7 @@ Currently only single node inference is supported. Multi-machine inference is fu
 - [x] Distributing CHGNet
 - [x] Distributing TensorNet
 - [X] Distributing MACE
+- [X] Distributing UMA
 - [ ] Multi-machine inference
 - [ ] More works coming soon! 
 

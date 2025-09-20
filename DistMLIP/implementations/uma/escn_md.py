@@ -110,8 +110,8 @@ def _get_rotmat_and_wigner(
 
         # select subset of coefficients we are using
         if self.mmax != self.lmax:
-            wigner = wigner.index_select(1, self.coefficient_index)
-            wigner_inv = wigner_inv.index_select(2, self.coefficient_index)
+            wigner = wigner.index_select(1, self.coefficient_index.to(Jd_buffers[0].device))
+            wigner_inv = wigner_inv.index_select(2, self.coefficient_index.to(Jd_buffers[0].device))
 
         if partition:
             wigner_and_M_mapping = torch.einsum(
